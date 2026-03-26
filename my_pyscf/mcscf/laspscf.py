@@ -1,22 +1,9 @@
-from pyscf.scf.rohf import get_roothaan_fock
-from pyscf import fci
-from pyscf.fci import cistring
-from pyscf.mcscf import casci, casci_symm, df
-from pyscf.tools import dump_mat
-from pyscf import symm, gto, scf, ao2mo, lib
-from pyscf.fci.direct_spin1 import _unpack_nelec
-from mrh.my_pyscf.mcscf.addons import state_average_n_mix, get_h1e_zipped_fcisolver, las2cas_civec
-from mrh.my_pyscf.mcscf import laspscf_sync, _DFLASCI, lasscf_guess, las_ao2mo
-from mrh.my_pyscf.fci import csf_solver
+from pyscf import gto, scf, lib
+from mrh.my_pyscf.mcscf import laspscf_sync, _DFLASCI
 from mrh.my_pyscf.df.sparse_df import sparsedf_array
-from mrh.my_pyscf.mcscf import chkfile, lasci
-from mrh.my_pyscf.mcscf.productstate import ImpureProductStateFCISolver, state_average_fcisolver
-from mrh.util.la import matrix_svd_control_options
-from itertools import combinations, permutations, product
-from scipy.sparse import linalg as sparse_linalg
+from mrh.my_pyscf.mcscf import lasci
 from scipy import linalg
 import numpy as np
-import copy
 
 # TODO: clean up
 density_fit = lasci.density_fit
