@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import linalg
 from mrh.util.la import matrix_svd_control_options
-from mrh.my_pyscf.mcscf import laspscf, laspscf_sync, _DFLASCI
+from mrh.my_pyscf.mcscf import laspscf, _DFLASCI
 from mrh.my_pyscf.mcscf import lasscf_guess
 from pyscf import gto, scf, symm
 from pyscf.mcscf import mc_ao2mo, casci_symm, mc1step
@@ -16,24 +16,24 @@ from functools import partial
 
 localize_init_guess=lasscf_guess._localize # backwards compatibility
 
-class LASSCF_UnitaryGroupGenerators (laspscf_sync.LASPSCF_UnitaryGroupGenerators):
+class LASSCF_UnitaryGroupGenerators (laspscf.LASPSCF_UnitaryGroupGenerators):
 
     def _init_orb (self, las, mo_coeff, ci):
-        laspscf_sync.LASPSCF_UnitaryGroupGenerators._init_nonfrozen_orb (self, las)
+        laspscf.LASPSCF_UnitaryGroupGenerators._init_nonfrozen_orb (self, las)
         self.uniq_orb_idx = self.nfrz_orb_idx.copy ()
         # The distinction between "uniq_orb_idx" and "nfrz_orb_idx" is an
         # artifact of backwards-compatibility with the old LASSCF implementation
 
 class LASSCFSymm_UnitaryGroupGenerators (LASSCF_UnitaryGroupGenerators):
-    __init__ = laspscf_sync.LASPSCFSymm_UnitaryGroupGenerators.__init__
-    _init_ci = laspscf_sync.LASPSCFSymm_UnitaryGroupGenerators._init_ci
+    __init__ = laspscf.LASPSCFSymm_UnitaryGroupGenerators.__init__
+    _init_ci = laspscf.LASPSCFSymm_UnitaryGroupGenerators._init_ci
     def _init_orb (self, las, mo_coeff, ci, orbsym):
         LASSCF_UnitaryGroupGenerators._init_orb (self, las, mo_coeff, ci)
         self.symm_forbid = (orbsym[:,None] ^ orbsym[None,:]).astype (np.bool_)
         self.uniq_orb_idx[self.symm_forbid] = False
         self.nfrz_orb_idx[self.symm_forbid] = False
 
-class LASSCF_HessianOperator (laspscf_sync.LASPSCF_HessianOperator):
+class LASSCF_HessianOperator (laspscf.LASPSCF_HessianOperator):
     # Required modifications for Hx: [I forgot about 3) at first]
     #   1) cache CASSCF-type eris and paaa - init_eri
     #   2) increase range of ocm2 - make_odm1s2c_sub
@@ -47,7 +47,7 @@ class LASSCF_HessianOperator (laspscf_sync.LASPSCF_HessianOperator):
     #   8) define "gx" in this context - get_gx 
 
     def _init_eri_(self):
-        laspscf_sync._init_df_(self)
+        laspscf._init_df_(self)
         if isinstance (self.las, _DFLASCI):
             self.cas_type_eris = mc_df._ERIS (self.las, self.mo_coeff, self.with_df)
         else:
@@ -102,7 +102,7 @@ class LASSCF_HessianOperator (laspscf_sync.LASPSCF_HessianOperator):
         (c: closed; a: active; v: virtual; p: any) '''
 
         ncore, nocc, nmo = self.ncore, self.nocc, self.nmo
-        gorb = laspscf_sync.LASPSCF_HessianOperator.orbital_response (self, kappa, odm1s,
+        gorb = laspscf.LASPSCF_HessianOperator.orbital_response (self, kappa, odm1s,
             ocm2, tdm1frs, tcm2, veff_prime)
         f1_prime = np.zeros ((self.nmo, self.nmo), dtype=self.dtype)
         # (H.x_va)_pp, (H.x_ac)_pp sector
