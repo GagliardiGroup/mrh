@@ -21,9 +21,6 @@ class LASPSCF_UnitaryGroupGenerators (lasscf_sync_o0.LASSCF_UnitaryGroupGenerato
         idx[nocc:,ncore:nocc] = False # no active -> virtual
         # No external rotations of active orbitals
         self.uniq_orb_idx = idx
-        self.uniq_orb_idx = self.nfrz_orb_idx.copy ()
-        # The distinction between "uniq_orb_idx" and "nfrz_orb_idx" is an
-        # artifact of backwards-compatibility with the old LASSCF implementation
 
 class LASPSCFSymm_UnitaryGroupGenerators (LASPSCF_UnitaryGroupGenerators):
     __init__ = lasscf_sync_o0.LASSCFSymm_UnitaryGroupGenerators.__init__

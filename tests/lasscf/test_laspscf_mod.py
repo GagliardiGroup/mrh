@@ -74,7 +74,7 @@ def setUpModule():
     global mol, mf, dmet, ugg, h_op, x
     dr_nn = 2.0
     mol = struct (dr_nn, dr_nn, '6-31g', symmetry=False)
-    mol.verbose = lib.logger.DEBUG 
+    mol.verbose = 0#lib.logger.DEBUG 
     mol.output = '/dev/null'
     mol.spin = 0 
     mol.build ()
@@ -110,10 +110,14 @@ class KnownValues(unittest.TestCase):
         grad0 = np.append (gorb0, gci0)
         grad1 = h_op.get_grad ()
         gx1 = h_op.get_gx ()
-        self.assertAlmostEqual (lib.fp (grad0), 0.011661604981096854, 8)
-        self.assertAlmostEqual (lib.fp (grad1), 0.011661604981096854, 8)
-        self.assertAlmostEqual (lib.fp (gx0), -0.0005604501808183955, 8)
-        self.assertAlmostEqual (lib.fp (gx1), -0.0005604501808183955, 8)
+        with self.subTest ('grad0'):
+            self.assertAlmostEqual (lib.fp (grad0), 0.011661604981096854, 8)
+        with self.subTest ('grad1'):
+            self.assertAlmostEqual (lib.fp (grad1), 0.011661604981096854, 8)
+        with self.subTest ('gx0'):
+            self.assertAlmostEqual (lib.fp (gx0), -0.0005604501808183955, 8)
+        with self.subTest ('gx1'):
+            self.assertAlmostEqual (lib.fp (gx1), -0.0005604501808183955, 8)
 
     def test_hessian (self):
         hx = h_op._matvec (x)
