@@ -9,6 +9,12 @@ import numpy as np
 # This must be locked to CSF solver for the forseeable future, because I know of no other way to
 # handle spin-breaking potentials while retaining spin constraint
 
+# An implementation that carries out vLASSCF, but without utilizing Schmidt decompositions
+# or "fragment" subspaces, so that the orbital-optimization part scales no better than
+# CASSCF. Eventually to be modified into a true all-PySCF implementation of vLASSCF
+
+localize_init_guess=lasscf_guess._localize
+
 class MicroIterInstabilityException (Exception):
     pass
 
@@ -387,12 +393,9 @@ class LASSCF_UnitaryGroupGenerators (object):
 
     def _init_orb (self, las, mo_coeff, ci):
         self._init_nonfrozen_orb (las)
-        ncore, nocc = las.ncore, las.ncore + las.ncas
-        idx = self.nfrz_orb_idx.copy ()
-        idx[ncore:nocc,:ncore] = False # no inactive -> active
-        idx[nocc:,ncore:nocc] = False # no active -> virtual
-        # No external rotations of active orbitals
-        self.uniq_orb_idx = idx
+        self.uniq_orb_idx = self.nfrz_orb_idx.copy ()
+        # The distinction between "uniq_orb_idx" and "nfrz_orb_idx" is an
+        # artifact of backwards-compatibility with the old LASSCF implementation
 
     def get_gx_idx (self):
         ''' Returns an index mask array identifying all nonredundant, nonfrozen orbital rotations
@@ -525,16 +528,6 @@ class LASSCFSymm_UnitaryGroupGenerators (LASSCF_UnitaryGroupGenerators):
                 solver.check_transformer_cache ()
                 tf_list.append (solver.transformer)
             self.ci_transformers.append (tf_list)
-
-def _init_df_(h_op):
-    from mrh.my_pyscf.mcscf.lasci import _DFLASCI
-    if isinstance (h_op.las, _DFLASCI):
-        h_op.with_df = h_op.las.with_df
-        if h_op.las.use_gpu:
-           pass
-        elif h_op.bPpj is None: h_op.bPpj = np.ascontiguousarray (
-                h_op.las.cderi_ao2mo (h_op.mo_coeff, h_op.mo_coeff[:,:h_op.nocc],
-                compact=False))
 
 # TODO: local state-average generalization
 class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
@@ -760,7 +753,23 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
         self.hci0 = [[hc - c*e for hc, c, e in zip (hcr, cr, er)]
                      for hcr, cr, er in zip (self.hci0, ci, self.e0)]
 
-    _init_eri_ = _init_df_
+    def _init_eri_(self):
+        lasscf_sync_o0._init_df_(self)
+        if isinstance (self.las, _DFLASCI):
+            self.cas_type_eris = mc_df._ERIS (self.las, self.mo_coeff, self.with_df)
+        else:
+            self.cas_type_eris = mc_ao2mo._ERIS (self.las, self.mo_coeff,
+                method='incore', level=2) # level=2 -> ppaa, papa only
+                # level=1 computes more stuff; it's only useful if I
+                # want the honest hdiag in get_prec ()
+        ncore, ncas = self.ncore, self.ncas
+        nocc = ncore + ncas
+        paaa_test = np.zeros_like (self.eri_paaa)
+        for p in range (self.nmo):
+            paaa_test[p] = self.cas_type_eris.ppaa[p][ncore:nocc]
+        if not np.allclose (paaa_test, self.eri_paaa):
+            logger.warn (self.las, 'possible (pa|aa) inconsistency; max err = %e',
+                         np.amax (np.abs (paaa_test-self.eri_paaa)))
 
     @property
     def dtype (self):
@@ -969,82 +978,34 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
         return veff_mo, h1frs
         
     def get_veff (self, dm1s_mo=None):
-        '''THIS FUNCTION IS OVERWRITTEN WITH A CALL TO LAS.GET_VEFF IN THE LASSCF_O0 CLASS. IT IS
-        ONLY RELEVANT TO THE "LASSCF" STEP OF THE OLDER, DEPRECATED, DMET-BASED ALGORITHM.
-
-        Compute the effective potential from a 1-RDM in the MO basis (presumptively the first-order
-        effective 1-RDM which is proportional to a step vector in MO and CI rotation coordinates).
-        If density fitting is used, the effective potential is approximate: it omits the
-        unoccupied-unoccupied lower-diagonal block.
-
-        Kwargs:
-            dm1s_mo : ndarray of shape (2,nmo,nmo)
-                Contains spin-separated 1-RDM
-
-        Returns:
-            veff_mo : ndarray of shape (nmo,nmo)
-                Spin-symmetric effective potential in the MO basis
-        '''
-
         mo = self.mo_coeff
         moH = mo.conjugate ().T
         nmo = mo.shape[-1]
         dm1_mo = dm1s_mo.sum (0)
-        if self.las.use_gpu or (getattr(self, 'bPpj', None) is None):
-            dm1_ao=np.dot(mo,np.dot(dm1_mo,moH))
-            veff_ao=np.squeeze(self.las.get_veff(dm=dm1_ao))
-            return np.dot(moH,np.dot(veff_ao,mo))
-        ncore, nocc, ncas = self.ncore, self.nocc, self.ncas
-        # vj
-        t0 = (lib.logger.process_clock (), lib.logger.perf_counter ())
-        veff_mo = np.zeros_like (dm1_mo)
-        dm1_rect = dm1_mo + dm1_mo.T
-        dm1_rect[ncore:nocc,ncore:nocc] /= 2
-        dm1_rect = dm1_rect[:,:nocc]
-        rho = np.tensordot (self.bPpj, dm1_rect, axes=2)
-        vj_pj = np.tensordot (rho, self.bPpj, axes=((0),(0)))
-        t1 = lib.logger.timer (self.las, 'vj_mo in microcycle', *t0)
-        dm_bj = dm1_mo[ncore:,:nocc]
-        vPpj = np.ascontiguousarray (self.las.cderi_ao2mo (mo, mo[:,ncore:]@dm_bj, compact=False))
-        # Don't ask my why this is faster than doing the two degrees of freedom separately...
-        t1 = lib.logger.timer (self.las, 'vk_mo vPpj in microcycle', *t1)
-
-        # vk (aa|ii), (uv|xy), (ua|iv), (au|vi)
-        vPbj = vPpj[:,ncore:,:] #np.dot (self.bPpq[:,ncore:,ncore:], dm_ai)
-        vk_bj = np.tensordot (vPbj, self.bPpj[:,:nocc,:], axes=((0,2),(0,1)))
-        t1 = lib.logger.timer (self.las, 'vk_mo (bb|jj) in microcycle', *t1)
-        # vk (ai|ai), (ui|av)
-        dm_ai = dm1_mo[nocc:,:ncore]
-        vPji = vPpj[:,:nocc,:ncore] #np.dot (self.bPpq[:,:nocc, nocc:], dm_ai)
-        # I think this works only because there is no dm_ui in this case, so I've eliminated all
-        # the dm_uv by choosing this range
-        bPbi = self.bPpj[:,ncore:,:ncore]
-        vk_bj += np.tensordot (bPbi, vPji, axes=((0,2),(0,2)))                    
-        t1 = lib.logger.timer (self.las, 'vk_mo (bi|aj) in microcycle', *t1)
-        t0 = lib.logger.timer (self.las, 'vj and vk mo', *t0)
-
-        # veff
-        vj_bj = vj_pj[ncore:,:]
-        veff_mo[ncore:,:nocc] = vj_bj - 0.5*vk_bj
-        veff_mo[:nocc,ncore:] = veff_mo[ncore:,:nocc].T
-        #vj_ai = vj_bj[ncas:,:ncore]
-        #vk_ai = vk_bj[ncas:,:ncore]
-        #veff_mo[ncore:,:nocc] = vj_bj
-        #veff_mo[:ncore,nocc:] = vj_ai.T
-        #veff_mo[ncore:,:nocc] -= vk_bj/2
-        #veff_mo[:ncore,nocc:] -= vk_ai.T/2
-        return veff_mo
+        dm1_ao = np.dot (mo, np.dot (dm1_mo, moH))
+        veff_ao = np.squeeze (self.las.get_veff (dm=dm1_ao))
+        return np.dot (moH, np.dot (veff_ao, mo))
 
     def split_veff (self, veff_mo, dm1s_mo):
-        # This function seems orphaned? Is it used anywhere?
         veff_c = veff_mo.copy ()
         ncore = self.ncore
         nocc = self.nocc
-        dm1s_cas = dm1s_mo[:,ncore:nocc,ncore:nocc]
-        sdm = dm1s_cas[0] - dm1s_cas[1]
-        vk_aa = -np.tensordot (self.eri_cas, sdm, axes=((1,2),(0,1))) / 2
+        sdm = dm1s_mo[0] - dm1s_mo[1]
+        sdm_ra = sdm[:,ncore:nocc]
+        sdm_ar = sdm[ncore:nocc,:].copy ()
+        sdm_ar[:,ncore:nocc] = 0.0
         veff_s = np.zeros_like (veff_c)
-        veff_s[ncore:nocc, ncore:nocc] = vk_aa
+        vk_pa = veff_s[:,ncore:nocc]
+        for p, v1 in enumerate (vk_pa):
+            praa = self.cas_type_eris.ppaa[p]
+            para = self.cas_type_eris.papa[p]
+            paaa = praa[ncore:nocc]
+            v1[:]  = np.tensordot (sdm_ra, praa, axes=2)
+            v1[:] += np.tensordot (sdm_ar, para, axes=2)
+        veff_s[:,:] *= -0.5
+        vk_aa = vk_pa[ncore:nocc]
+        veff_s[ncore:nocc,:] = vk_pa.T
+        assert (np.allclose (veff_s, veff_s.T)), vk_aa-vk_aa.T
         veffa = veff_c + veff_s
         veffb = veff_c - veff_s
         return np.stack ([veffa, veffb], axis=0)
@@ -1129,6 +1090,11 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
             kappa2 : ndarray of shape (nmo,nmo)
                 Contains the unpacked orbital-rotation sector of the Hessian-vector product.
         '''
+        gorb = self.orbital_response_1cum (kappa, odm1s, ocm2, tdm1rs, tcm2, veff_prime)
+        gorb = self.orbital_response_2cum (kappa, odm1s, ocm2, tdm1rs, tcm2, veff_prime, gorb)
+        return gorb
+
+    def orbital_response_1cum (self, kappa, odm1s, ocm2, tdm1rs, tcm2, veff_prime):
         ncore, nocc = self.ncore, self.nocc
         # I put off + h.c. until now in order to make other things more natural
         odm1s += odm1s.transpose (0,2,1)
@@ -1144,6 +1110,48 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
         fock1[ncore:nocc,ncore:nocc] += np.tensordot (self.eri_cas, ecm2, axes=((1,2,3),(1,2,3)))
         fock1 += (np.dot (self.fock1, kappa) - np.dot (kappa, self.fock1)) / 2
         return fock1 - fock1.T
+
+    def orbital_response_2cum (self, kappa, odm1s, ocm2, tdm1frs, tcm2, veff_prime, gorb):
+        ''' 1cum does everything except va/ac degrees of freedom
+        (c: closed; a: active; v: virtual; p: any) '''
+
+        ncore, nocc, nmo = self.ncore, self.nocc, self.nmo
+        f1_prime = np.zeros ((self.nmo, self.nmo), dtype=self.dtype)
+        # (H.x_va)_pp, (H.x_ac)_pp sector
+        if self.las.use_gpu:
+            from mrh.my_pyscf.gpu import libgpu
+            g_f1_prime = np.zeros ((self.nmo, self.nmo), dtype=self.dtype)
+            libgpu.orbital_response(self.las.use_gpu,
+                                           g_f1_prime, # gorb + (f1_prime - f1_prime.T)
+                                           self.cas_type_eris.ppaa, self.cas_type_eris.papa, self.eri_paaa,
+                                           ocm2, tcm2, gorb,
+                                           ncore, nocc, nmo)
+            return g_f1_prime
+        else:
+            for p, f1 in enumerate (f1_prime):
+                praa = self.cas_type_eris.ppaa[p]
+                para = self.cas_type_eris.papa[p]
+                paaa = praa[ncore:nocc]
+                # g_pabc d_qabc + g_prab d_qrab + g_parb d_qarb + g_pabr d_qabr (Formal)
+                #        d_cbaq          d_abqr          d_aqbr          d_qabr (Symmetry of ocm2)
+                # g_pcba d_abcq + g_prab d_abqr + g_parc d_aqcr + g_pbcr d_qbcr (Relabel)
+                #                                                 g_pbrc        (Symmetry of eri)
+                # g_pcba d_abcq + g_prab d_abqr + g_parc d_aqcr + g_pbrc d_qbcr (Final)
+                for i, j in ((0, ncore), (nocc, nmo)): # Don't double-count
+                    ra, ar, cm = praa[i:j], para[:,i:j], ocm2[:,:,:,i:j]
+                    f1[i:j] += np.tensordot (paaa, cm, axes=((0,1,2),(2,1,0))) # last index external
+                    f1[ncore:nocc] += np.tensordot (ra, cm, axes=((0,1,2),(3,0,1))) # third index external
+                    f1[ncore:nocc] += np.tensordot (ar, cm, axes=((0,1,2),(0,3,2))) # second index external
+                    f1[ncore:nocc] += np.tensordot (ar, cm, axes=((0,1,2),(1,3,2))) # first index external
+
+            # (H.x_aa)_va, (H.x_aa)_ac
+            ocm2 = ocm2[:,:,:,ncore:nocc] + ocm2[:,:,:,ncore:nocc].transpose (1,0,3,2)
+            ocm2 += ocm2.transpose (2,3,0,1)
+            ecm2 = ocm2 + tcm2
+            f1_prime[:ncore,ncore:nocc] += np.tensordot (self.eri_paaa[:ncore], ecm2, axes=((1,2,3),(1,2,3)))
+            f1_prime[nocc:,ncore:nocc] += np.tensordot (self.eri_paaa[nocc:], ecm2, axes=((1,2,3),(1,2,3)))
+            return gorb + (f1_prime - f1_prime.T)
+
 
     def ci_response_offdiag (self, kappa1, h1frs_prime):
         '''Compute part of the CI rotation sector of the Hessian-vector product corresponding
@@ -1378,26 +1386,9 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
         h2eff_sub = h2eff_sub[:,:,(ix_i*ncas)+ix_j]
         h2eff_sub = h2eff_sub.reshape (nmo, -1)
         return h2eff_sub
+
     def _update_h2eff_sub (self, mo1, umat, h2eff_sub):
-        ncore, ncas, nocc, nmo = self.ncore, self.ncas, self.nocc, self.nmo
-        ucas = umat[ncore:nocc, ncore:nocc]
-        bmPu = None
-        if hasattr (h2eff_sub, 'bmPu'):bmPu = h2eff_sub.bmPu
-        h2eff_sub = h2eff_sub.reshape (nmo*ncas, ncas*(ncas+1)//2)
-        h2eff_sub = lib.numpy_helper.unpack_tril (h2eff_sub)
-        h2eff_sub = h2eff_sub.reshape (nmo, ncas, ncas, ncas)
-        h2eff_sub = np.tensordot (ucas, h2eff_sub, axes=((0),(1))) # bpaa
-        h2eff_sub = np.tensordot (umat, h2eff_sub, axes=((0),(1))) # qbaa
-        h2eff_sub = np.tensordot (h2eff_sub, ucas, axes=((2),(0))) # qbab
-        h2eff_sub = np.tensordot (h2eff_sub, ucas, axes=((2),(0))) # qbbb
-        ix_i, ix_j = np.tril_indices (ncas)
-        h2eff_sub = h2eff_sub.reshape (nmo, ncas, ncas*ncas)
-        h2eff_sub = h2eff_sub[:,:,(ix_i*ncas)+ix_j]
-        h2eff_sub = h2eff_sub.reshape (nmo, -1)
-        if bmPu is not None:
-            bmPu = np.dot (bmPu, ucas)
-            h2eff_sub = lib.tag_array (h2eff_sub, bmPu = bmPu)
-        return h2eff_sub
+        return self.las.ao2mo (mo1)
 
     def get_grad (self):
         gorb = self.fock1 - self.fock1.T
