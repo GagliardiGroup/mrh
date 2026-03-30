@@ -3,7 +3,7 @@ from scipy import linalg
 from mrh.util.la import matrix_svd_control_options
 from mrh.my_pyscf.mcscf import lasscf_sync_o0, _DFLASCI
 from mrh.my_pyscf.mcscf import lasscf_guess
-from pyscf import gto, scf, symm
+from pyscf import gto, scf, symm, lib
 from pyscf.mcscf import mc1step
 from pyscf.lo import orth
 from pyscf.lib import tag_array, with_doc, logger
