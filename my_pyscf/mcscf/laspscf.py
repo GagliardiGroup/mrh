@@ -18,6 +18,7 @@ localize_init_guess=lasscf_guess._localize # backwards compatibility
 
 class LASPSCF_UnitaryGroupGenerators (lasscf_sync_o0.LASSCF_UnitaryGroupGenerators):
 
+    # TODO: swap logic with lasscf_sync_o0
     def _init_orb (self, las, mo_coeff, ci):
         lasscf_sync_o0.LASPSCF_UnitaryGroupGenerators._init_nonfrozen_orb (self, las)
         self.uniq_orb_idx = self.nfrz_orb_idx.copy ()
@@ -27,6 +28,7 @@ class LASPSCF_UnitaryGroupGenerators (lasscf_sync_o0.LASSCF_UnitaryGroupGenerato
 class LASPSCFSymm_UnitaryGroupGenerators (LASPSCF_UnitaryGroupGenerators):
     __init__ = lasscf_sync_o0.LASPSCFSymm_UnitaryGroupGenerators.__init__
     _init_ci = lasscf_sync_o0.LASPSCFSymm_UnitaryGroupGenerators._init_ci
+    # TODO: swap logic with lasscf_sync_o0
     def _init_orb (self, las, mo_coeff, ci, orbsym):
         LASSCF_UnitaryGroupGenerators._init_orb (self, las, mo_coeff, ci)
         self.symm_forbid = (orbsym[:,None] ^ orbsym[None,:]).astype (np.bool_)
@@ -46,6 +48,7 @@ class LASPSCF_HessianOperator (lasscf_sync_o0.LASSCF_HessianOperator):
     #   7) current prec may not be "good enough" - get_prec
     #   8) define "gx" in this context - get_gx 
 
+    # TODO: swap logic with lasscf_sync_o0
     def _init_eri_(self):
         lasscf_sync_o0._init_df_(self)
         if isinstance (self.las, _DFLASCI):
@@ -64,6 +67,7 @@ class LASPSCF_HessianOperator (lasscf_sync_o0.LASSCF_HessianOperator):
             logger.warn (self.las, 'possible (pa|aa) inconsistency; max err = %e',
                          np.amax (np.abs (paaa_test-self.eri_paaa)))
 
+    # TODO: swap logic with lasscf_sync_o0
     def get_veff (self, dm1s_mo=None):
         mo = self.mo_coeff
         moH = mo.conjugate ().T
@@ -73,6 +77,7 @@ class LASPSCF_HessianOperator (lasscf_sync_o0.LASSCF_HessianOperator):
         veff_ao = np.squeeze (self.las.get_veff (dm=dm1_ao))
         return np.dot (moH, np.dot (veff_ao, mo))
 
+    # TODO: swap logic with lasscf_sync_o0
     def split_veff (self, veff_mo, dm1s_mo):
         veff_c = veff_mo.copy ()
         ncore = self.ncore
@@ -97,6 +102,7 @@ class LASPSCF_HessianOperator (lasscf_sync_o0.LASSCF_HessianOperator):
         veffb = veff_c - veff_s
         return np.stack ([veffa, veffb], axis=0)
 
+    # TODO: swap logic with lasscf_sync_o0
     def orbital_response (self, kappa, odm1s, ocm2, tdm1frs, tcm2, veff_prime):
         ''' Parent class does everything except va/ac degrees of freedom
         (c: closed; a: active; v: virtual; p: any) '''
@@ -140,27 +146,21 @@ class LASPSCF_HessianOperator (lasscf_sync_o0.LASSCF_HessianOperator):
             f1_prime[nocc:,ncore:nocc] += np.tensordot (self.eri_paaa[nocc:], ecm2, axes=((1,2,3),(1,2,3)))
             return gorb + (f1_prime - f1_prime.T)
 
+    # TODO: swap logic with lasscf_sync_o0
     def _update_h2eff_sub (self, mo1, umat, h2eff_sub):
         return self.las.ao2mo (mo1)
 
 class LASPSCFNoSymm (lasscf_sync_o0.LASSCFNoSymm):
-    _ugg = LASSCF_UnitaryGroupGenerators
-    _hop = LASSCF_HessianOperator
+    _ugg = LASPSCF_UnitaryGroupGenerators
+    _hop = LASPSCF_HessianOperator
     as_scanner = mc1step.as_scanner
-    def dump_flags (self, verbose=None, _method_name='LASSCF'):
+    def dump_flags (self, verbose=None, _method_name='LASPSCF'):
         lasscf_sync_o0.LASPSCFNoSymm.dump_flags (self, verbose=verbose, _method_name=_method_name)
-    #SV
-    def nuc_grad_method(self):
-        from mrh.my_pyscf.grad import lasscf
-        return lasscf.Gradients(self)
-
-    #SV
-    Gradients = nuc_grad_method
     
 class LASPSCFSymm (lasscf_sync_o0.LASSCFSymm):
-    _ugg = LASSCFSymm_UnitaryGroupGenerators    
-    _hop = LASSCF_HessianOperator
-    dump_flags = LASSCFNoSymm.dump_flags
+    _ugg = LASPSCFSymm_UnitaryGroupGenerators    
+    _hop = LASPSCF_HessianOperator
+    dump_flags = LASPSCFNoSymm.dump_flags
     as_scanner = mc1step.as_scanner
 
 def LASPSCF (mf_or_mol, ncas_sub, nelecas_sub, **kwargs):
