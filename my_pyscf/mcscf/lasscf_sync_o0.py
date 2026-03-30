@@ -1,6 +1,7 @@
 from pyscf import gto, scf, lib, symm
+from pyscf.mcscf import mc_ao2mo, mc1step
 from mrh.my_pyscf.fci.csfstring import ImpossibleCIvecError
-from mrh.my_pyscf.mcscf import _DFLASCI, lasci
+from mrh.my_pyscf.mcscf import _DFLASCI, lasci, lasscf_guess
 from scipy.sparse import linalg as sparse_linalg
 from mrh.my_pyscf.df.sparse_df import sparsedf_array
 from scipy import linalg 
@@ -754,7 +755,7 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
                      for hcr, cr, er in zip (self.hci0, ci, self.e0)]
 
     def _init_eri_(self):
-        lasscf_sync_o0._init_df_(self)
+        _init_df_(self)
         if isinstance (self.las, _DFLASCI):
             self.cas_type_eris = mc_df._ERIS (self.las, self.mo_coeff, self.with_df)
         else:
@@ -1400,6 +1401,15 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
         gx = gorb[self.ugg.get_gx_idx ()]
         return gx
 
+def _init_df_(h_op):
+    from mrh.my_pyscf.mcscf.lasci import _DFLASCI
+    if isinstance (h_op.las, _DFLASCI):
+        h_op.with_df = h_op.las.with_df
+        if h_op.las.use_gpu:
+           pass
+        elif h_op.bPpj is None: h_op.bPpj = np.ascontiguousarray (
+                h_op.las.cderi_ao2mo (h_op.mo_coeff, h_op.mo_coeff[:,:h_op.nocc],
+                compact=False))
 
 
 density_fit = lasci.density_fit
@@ -1586,6 +1596,7 @@ class LASSCFNoSymm (lasci.LASCINoSymm):
     get_grad = get_grad
     get_grad_orb = get_grad_orb
     get_grad_ci = get_grad_ci
+    as_scanner = mc1step.as_scanner
     _hop = LASSCF_HessianOperator
     _kern = kernel
     def get_hop (self, mo_coeff=None, ci=None, ugg=None, **kwargs):
@@ -1707,6 +1718,7 @@ class LASSCFNoSymm (lasci.LASCINoSymm):
 
 class LASSCFSymm (lasci.LASCISymm, LASSCFNoSymm):
 
+    as_scanner = mc1step.as_scanner
     get_veff = LASSCFNoSymm.get_veff
     _ugg = LASSCFSymm_UnitaryGroupGenerators
 

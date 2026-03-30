@@ -4,7 +4,7 @@ from mrh.util.la import matrix_svd_control_options
 from mrh.my_pyscf.mcscf import lasscf_sync_o0, _DFLASCI
 from mrh.my_pyscf.mcscf import lasscf_guess
 from pyscf import gto, scf, symm
-from pyscf.mcscf import mc_ao2mo, casci_symm, mc1step
+from pyscf.mcscf import mc1step
 from pyscf.mcscf import df as mc_df
 from pyscf.lo import orth
 from pyscf.lib import tag_array, with_doc, logger
@@ -15,7 +15,7 @@ localize_init_guess=lasscf_guess._localize # backwards compatibility
 class LASPSCF_UnitaryGroupGenerators (lasscf_sync_o0.LASSCF_UnitaryGroupGenerators):
 
     def _init_orb (self, las, mo_coeff, ci):
-        lasscf_sync_o0.LASPSCF_UnitaryGroupGenerators._init_nonfrozen_orb (self, las)
+        lasscf_sync_o0.LASSCF_UnitaryGroupGenerators._init_nonfrozen_orb (self, las)
         idx = self.nfrz_orb_idx.copy ()
         idx[ncore:nocc,:ncore] = False # no inactive -> active
         idx[nocc:,ncore:nocc] = False # no active -> virtual
@@ -26,8 +26,8 @@ class LASPSCF_UnitaryGroupGenerators (lasscf_sync_o0.LASSCF_UnitaryGroupGenerato
         # artifact of backwards-compatibility with the old LASSCF implementation
 
 class LASPSCFSymm_UnitaryGroupGenerators (LASPSCF_UnitaryGroupGenerators):
-    __init__ = lasscf_sync_o0.LASPSCFSymm_UnitaryGroupGenerators.__init__
-    _init_ci = lasscf_sync_o0.LASPSCFSymm_UnitaryGroupGenerators._init_ci
+    __init__ = lasscf_sync_o0.LASSCFSymm_UnitaryGroupGenerators.__init__
+    _init_ci = lasscf_sync_o0.LASSCFSymm_UnitaryGroupGenerators._init_ci
     def _init_orb (self, las, mo_coeff, ci, orbsym):
         LASPSCF_UnitaryGroupGenerators._init_orb (self, las, mo_coeff, ci)
         self.symm_forbid = (orbsym[:,None] ^ orbsym[None,:]).astype (np.bool_)
@@ -47,7 +47,7 @@ class LASPSCF_HessianOperator (lasscf_sync_o0.LASSCF_HessianOperator):
     #   7) current prec may not be "good enough" - get_prec
     #   8) define "gx" in this context - get_gx 
 
-    _init_eri_ = _init_df_
+    _init_eri_ = lasscf_sync_o0._init_df_
 
     def get_veff (self, dm1s_mo=None):
         '''THIS FUNCTION IS OVERWRITTEN WITH A CALL TO LAS.GET_VEFF IN THE LASSCF_O0 CLASS. IT IS
@@ -156,20 +156,9 @@ class LASPSCF_HessianOperator (lasscf_sync_o0.LASSCF_HessianOperator):
     def _update_h2eff_sub (self, mo1, umat, h2eff_sub):
         return self.las.ao2mo (mo1)
 
-def _init_df_(h_op):
-    from mrh.my_pyscf.mcscf.lasci import _DFLASCI
-    if isinstance (h_op.las, _DFLASCI):
-        h_op.with_df = h_op.las.with_df
-        if h_op.las.use_gpu:
-           pass
-        elif h_op.bPpj is None: h_op.bPpj = np.ascontiguousarray (
-                h_op.las.cderi_ao2mo (h_op.mo_coeff, h_op.mo_coeff[:,:h_op.nocc],
-                compact=False))
-
 class LASPSCFNoSymm (lasscf_sync_o0.LASSCFNoSymm):
     _ugg = LASPSCF_UnitaryGroupGenerators
     _hop = LASPSCF_HessianOperator
-    as_scanner = mc1step.as_scanner
     def dump_flags (self, verbose=None, _method_name='LASPSCF'):
         lasscf_sync_o0.LASPSCFNoSymm.dump_flags (self, verbose=verbose, _method_name=_method_name)
     
@@ -177,7 +166,6 @@ class LASPSCFSymm (lasscf_sync_o0.LASSCFSymm):
     _ugg = LASPSCFSymm_UnitaryGroupGenerators    
     _hop = LASPSCF_HessianOperator
     dump_flags = LASPSCFNoSymm.dump_flags
-    as_scanner = mc1step.as_scanner
 
 def LASPSCF (mf_or_mol, ncas_sub, nelecas_sub, **kwargs):
     # try grabbing gpu handle from mf_or_mol instead of additional argument
