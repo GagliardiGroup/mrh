@@ -5,7 +5,6 @@ from mrh.my_pyscf.mcscf import lasscf_sync_o0, _DFLASCI
 from mrh.my_pyscf.mcscf import lasscf_guess
 from pyscf import gto, scf, symm
 from pyscf.mcscf import mc1step
-from pyscf.mcscf import df as mc_df
 from pyscf.lo import orth
 from pyscf.lib import tag_array, with_doc, logger
 from functools import partial
@@ -17,6 +16,7 @@ class LASPSCF_UnitaryGroupGenerators (lasscf_sync_o0.LASSCF_UnitaryGroupGenerato
     def _init_orb (self, las, mo_coeff, ci):
         lasscf_sync_o0.LASSCF_UnitaryGroupGenerators._init_nonfrozen_orb (self, las)
         idx = self.nfrz_orb_idx.copy ()
+        ncore, nocc = las.ncore, las.ncore + las.ncas
         idx[ncore:nocc,:ncore] = False # no inactive -> active
         idx[nocc:,ncore:nocc] = False # no active -> virtual
         # No external rotations of active orbitals
@@ -160,7 +160,7 @@ class LASPSCFNoSymm (lasscf_sync_o0.LASSCFNoSymm):
     _ugg = LASPSCF_UnitaryGroupGenerators
     _hop = LASPSCF_HessianOperator
     def dump_flags (self, verbose=None, _method_name='LASPSCF'):
-        lasscf_sync_o0.LASPSCFNoSymm.dump_flags (self, verbose=verbose, _method_name=_method_name)
+        lasscf_sync_o0.LASSCFNoSymm.dump_flags (self, verbose=verbose, _method_name=_method_name)
     
 class LASPSCFSymm (lasscf_sync_o0.LASSCFSymm):
     _ugg = LASPSCFSymm_UnitaryGroupGenerators    

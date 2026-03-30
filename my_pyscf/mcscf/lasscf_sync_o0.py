@@ -1,5 +1,6 @@
 from pyscf import gto, scf, lib, symm
 from pyscf.mcscf import mc_ao2mo, mc1step
+from pyscf.mcscf import df as mc_df
 from mrh.my_pyscf.fci.csfstring import ImpossibleCIvecError
 from mrh.my_pyscf.mcscf import _DFLASCI, lasci, lasscf_guess
 from scipy.sparse import linalg as sparse_linalg
