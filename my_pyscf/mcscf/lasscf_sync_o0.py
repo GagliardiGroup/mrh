@@ -1324,7 +1324,16 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
         return Horb_diag
 
     def _get_Horb_diag_presymm_2cum (self):
-        return 0
+        nmo, ncore, nocc = self.nmo, self.ncore, self.nocc
+        Horb_diag = np.zeros ((nmo,nmo), dtype=self.dtype)
+        for p in range (nmo):
+            ppaa = self.cas_type_eris.ppaa[p][p]
+            papa = self.cas_type_eris.papa[p][:,p]
+            # F2^pp_aa terms - p uncontracted w/ density matrix
+            Horb_diag[p,ncore:nocc] += lib.einsum ('ab,qqab->q', ppaa, self.cascm2)
+            Horb_diag[p,ncore:nocc] += lib.einsum ('ab,qaqb->q', papa, self.cascm2)
+            Horb_diag[p,ncore:nocc] += lib.einsum ('ab,qabq->q', ppaa, self.cascm2)
+        return Horb_diag
 
     def _get_Horb_diag_presymm (self):
         Horb_diag = self._get_Horb_diag_presymm_fock ()
