@@ -153,6 +153,8 @@ class LASPSCF_HessianOperator (lasscf_sync_o0.LASSCF_HessianOperator):
     def _update_h2eff_sub (self, mo1, umat, h2eff_sub):
         return self.las.ao2mo (mo1)
 
+    _get_Horb_diag_presymm = lasscf_sync_o0.LASSCF_HessianOperator._get_Horb_diag_presymm_fock
+
 class LASPSCFNoSymm (lasscf_sync_o0.LASSCFNoSymm):
     _ugg = LASPSCF_UnitaryGroupGenerators
     _hop = LASPSCF_HessianOperator

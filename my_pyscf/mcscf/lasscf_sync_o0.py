@@ -1276,15 +1276,31 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
             return Mx
         return sparse_linalg.LinearOperator (self.shape,matvec=prec_op,dtype=self.dtype)
 
-    def _get_Horb_diag (self):
+    def _get_Horb_diag_presymm_fock (self):
         fock = np.stack ([np.diag (h) for h in list (self.h1s)], axis=0)
         num = np.stack ([np.diag (d) for d in list (self.dm1s)], axis=0)
         Horb_diag = sum ([np.multiply.outer (f,n) for f,n in zip (fock, num)])
         Horb_diag -= np.diag (self.fock1)[None,:]
-        Horb_diag += Horb_diag.T
         # This is where I stop unless I want to add the split-c and split-x terms
         # Split-c and split-x, for inactive-external rotations, requires I calculate a bunch
         # of extra eris (g^aa_ii, g^ai_ai)
+        return Horb_diag
+
+    def _get_Horb_diag_presymm_split_cx (self):
+        return 0
+
+    def _get_Horb_diag_presymm_2cum (self):
+        return 0
+
+    def _get_Horb_diag_presymm (self):
+        Horb_diag = self._get_Horb_diag_presymm_fock ()
+        Horb_diag += self._get_Horb_diag_presymm_split_cx ()
+        Horb_diag += self._get_Horb_diag_presymm_2cum ()
+        return Horb_diag
+
+    def _get_Horb_diag (self):
+        Horb_diag = self._get_Horb_diag_presymm ()
+        Horb_diag += Horb_diag.T
         return Horb_diag[self.ugg.uniq_orb_idx]
 
     def _get_Hci_diag (self):
