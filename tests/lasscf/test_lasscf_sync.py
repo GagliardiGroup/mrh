@@ -76,6 +76,23 @@ class KnownValues(unittest.TestCase):
         hx = h_op._matvec (x)
         self.assertAlmostEqual (lib.fp (hx), 179.27239294630812, 7)
 
+    def test_horb_diag (self):
+        hdiag = itsec (*ugg.unpack (h_op._get_Hdiag ()))
+        #refs = np.zeros_like (x)
+        #xp = x.copy ()
+        #for i in range (len (x)):
+        #    xp[:] = 0
+        #    xp[i] = 1
+        #    refs[i] = h_op (xp)[i]
+        #refs = itsec (*ugg.unpack (refs))
+        refs = [3.7405405082442176,
+                0.6734009953588086,
+                15.20141326836336,
+                -2.5826328497194897]
+        for sec, test, ref in zip (sectors, hdiag, refs):
+            with self.subTest (sector=sec):
+                self.assertAlmostEqual (lib.fp (test), ref, 6)
+
     def test_hc2 (self):
         xp = x.copy ()
         xp[:offs_ci2] = 0.0

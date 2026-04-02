@@ -1286,6 +1286,19 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
         # of extra eris (g^aa_ii, g^ai_ai)
         return Horb_diag
 
+    def _get_Horb_diag_presymm_eri_aa (self):
+        nmo, ncore, nocc = self.nmo, self.ncore, self.nocc
+        h2 = self.eri_paaa[ncore:nocc]
+        d2 = self.casdm2
+        fock2 = lib.einsum ('pqij,rsij->pqrs', h2, d2)
+        fock2 += lib.einsum ('piqj,risj->pqrs', h2, d2)
+        fock2 += lib.einsum ('pjiq,rjis->pqrs', h2, d2)
+        Horb_diag = np.diagonal (np.diagonal (fock2, axis1=1, axis2=3),
+                                 axis1=0,axis2=1)
+        Horb_diag -= np.diagonal (np.diagonal (fock2, axis1=0, axis1=1),
+                                  axis1=0,axis2=1)
+        return Horb_diag
+
     def _get_Horb_diag_presymm_split_cx (self):
         nmo, ncore, nocc = self.nmo, self.ncore, self.nocc
         Horb_diag = np.zeros ((nmo,nmo), dtype=self.dtype)
@@ -1302,6 +1315,7 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
         for p in range (nmo):
             pqaa = self.cas_type_eris.ppaa[p]
             paqa = self.cas_type_eris.papa[p]
+            paqa_as = paqa + paqa.transpose (2,1,0)
             # F2^pp_aa terms - p uncontracted w/ density matrix
             jaa, kaa = pqaa[p], paqa[:,p]
             Horb_diag[p] += 2 * lib.einsum ('ab,ia,ib->i',kaa,dm1_pa,dm1_pa)
@@ -1309,10 +1323,10 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
             # F2^ja_aj terms - both indices contracted w/ density matrix
             if p > nocc: continue
             Horb_diag[p,ncore:nocc] -= 2 * lib.einsum ('jab,j,ab->a',pqaa,dm1[p],dm1_aa)
-            Horb_diag[p,ncore:nocc] += 2 * lib.einsum ('bja,sj,sab->a', paqa,dm1s[:,p],dm1s_aa)
+            Horb_diag[p,ncore:nocc] += lib.einsum ('bja,sj,sab->a',paqa_as,dm1s[:,p],dm1s_aa)
             if p < ncore:
                 Horb_diag[ncore:nocc,p] -= 2 * lib.einsum ('jab,j,ab->a',pqaa,dm1[p],dm1_aa)
-                Horb_diag[ncore:nocc,p] += 2 * lib.einsum ('bja,sj,sab->a',paqa,dm1s[:,p],dm1s_aa)
+                Horb_diag[ncore:nocc,p] += lib.einsum ('bja,sj,sab->a',paqa_as,dm1s[:,p],dm1s_aa)
         return Horb_diag
 
     def _get_Horb_diag_presymm_2cum (self):
