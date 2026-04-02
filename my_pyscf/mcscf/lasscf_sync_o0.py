@@ -1291,6 +1291,10 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
         Horb_diag = np.zeros ((nmo,nmo), dtype=self.dtype)
         dm1s = self.dm1s
         dm1 = dm1s[0] + dm1s[1]
+        dm1s_pa = dm1s[:,:,ncore:nocc]
+        dm1_pa = dm1[:,ncore:nocc]
+        dm1s_aa = dm1s_pa[:,ncore:nocc,:]
+        dm1_aa = dm1_pa[ncore:nocc:]
         j_pc = self.cas_type_eris.j_pc
         k_pc = self.cas_type_eris.k_pc
         # F2^pp_ii terms - p uncontracted w/ density matrix
@@ -1300,27 +1304,15 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
             paqa = self.cas_type_eris.papa[p]
             # F2^pp_aa terms - p uncontracted w/ density matrix
             jaa, kaa = pqaa[p], paqa[:,p]
-            Horb_diag[p] += 2 * lib.einsum ('ab,ia,ib->i',kaa,
-                                            dm1[:,ncore:nocc],
-                                            dm1[:,ncore:nocc])
-            Horb_diag[p] -= lib.einsum ('ab,sia,sib->i',jaa+kaa,
-                                        dm1s[:,:,ncore:nocc],
-                                        dm1s[:,:,ncore:nocc])
+            Horb_diag[p] += 2 * lib.einsum ('ab,ia,ib->i',kaa,dm1_pa,dm1_pa)
+            Horb_diag[p] -= lib.einsum ('ab,sia,sib->i',jaa+kaa,dm1s_pa,dm1s_pa)
             # F2^ja_aj terms - both indices contracted w/ density matrix
             if p > nocc: continue
-            Horb_diag[p,ncore:nocc] -= 2 * lib.einsum ('jab,j,ab->a', pqaa,
-                                                       dm1[p],
-                                                       dm1[ncore:nocc,ncore:nocc])
-            Horb_diag[p,ncore:nocc] += 2 * lib.einsum ('bja,sj,sab->a', paqa,
-                                                       dm1s[:,p],
-                                                       dm1s[:,ncore:nocc,ncore:nocc])
-            if p > ncore:
-                Horb_diag[p,:ncore] -= 2 * lib.einsum ('aij,a,ij->i', pqaa,
-                                                       dm1[p],
-                                                       dm1[:ncore,:ncore])
-                Horb_diag[p,:ncore] += 2 * lib.einsum ('jai,sa,sij->i', paqa,
-                                                       dm1s[:,p],
-                                                       dm1s[:,:ncore,:ncore]
+            Horb_diag[p,ncore:nocc] -= 2 * lib.einsum ('jab,j,ab->a',pqaa,dm1[p],dm1_aa)
+            Horb_diag[p,ncore:nocc] += 2 * lib.einsum ('bja,sj,sab->a', paqa,dm1s[:,p],dm1s_aa)
+            if p < ncore:
+                Horb_diag[ncore:nocc,p] -= 2 * lib.einsum ('jab,j,ab->a',pqaa,dm1[p],dm1_aa)
+                Horb_diag[ncore:nocc,p] += 2 * lib.einsum ('bja,sj,sab->a',paqa,dm1s[:,p],dm1s_aa)
         return Horb_diag
 
     def _get_Horb_diag_presymm_2cum (self):
@@ -1337,6 +1329,7 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
 
     def _get_Horb_diag_presymm (self):
         Horb_diag = self._get_Horb_diag_presymm_fock ()
+        self._init_eri_()
         Horb_diag += self._get_Horb_diag_presymm_split_cx ()
         Horb_diag += self._get_Horb_diag_presymm_2cum ()
         return Horb_diag
