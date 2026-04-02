@@ -1286,66 +1286,67 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
         # of extra eris (g^aa_ii, g^ai_ai)
         return Horb_diag
 
-    def _get_Horb_diag_presymm_eri_aa (self):
+    def _get_Horb_diag_presymm_eri_F2aaaa (self):
         nmo, ncore, nocc = self.nmo, self.ncore, self.nocc
         h2 = self.eri_paaa[ncore:nocc]
-        d2 = self.casdm2
+        d2 = self.cascm2
         fock2 = lib.einsum ('pqij,rsij->pqrs', h2, d2)
         fock2 += lib.einsum ('piqj,risj->pqrs', h2, d2)
         fock2 += lib.einsum ('pjiq,rjis->pqrs', h2, d2)
-        Horb_diag = np.diagonal (np.diagonal (fock2, axis1=1, axis2=3),
-                                 axis1=0,axis2=1)
-        Horb_diag -= np.diagonal (np.diagonal (fock2, axis1=0, axis1=1),
-                                  axis1=0,axis2=1)
+        Horb_aa = np.diagonal (fock2, axis1=1, axis2=3).copy ()
+        Horb_aa -= np.diagonal (fock2, axis1=0, axis2=1)
+        Horb_aa = np.diagonal (Horb_aa, axis1=0, axis2=1)
+        Horb_diag = np.zeros ((nmo, nmo), dtype=self.dtype)
+        Horb_diag[ncore:nocc,ncore:nocc] = Horb_aa
         return Horb_diag
 
-    def _get_Horb_diag_presymm_split_cx (self):
+    def _get_Horb_diag_presymm_eri_F2ujuj (self):
         nmo, ncore, nocc = self.nmo, self.ncore, self.nocc
-        Horb_diag = np.zeros ((nmo,nmo), dtype=self.dtype)
-        dm1s = self.dm1s
-        dm1 = dm1s[0] + dm1s[1]
-        dm1s_pa = dm1s[:,:,ncore:nocc]
-        dm1_pa = dm1[:,ncore:nocc]
-        dm1s_aa = dm1s_pa[:,ncore:nocc,:]
-        dm1_aa = dm1_pa[ncore:nocc:]
+        d2 = self.casdm2
+        d2T = d2 + d2.transpose (0,1,3,2)
+        d2_aabb = np.diagonal (d2,axis1=0,axis2=1)
+        d2_abab = np.diagonal (d2T,axis1=0,axis2=2) 
+        Horb_diag = np.zeros ((nmo, nmo), dtype=self.dtype)
         j_pc = self.cas_type_eris.j_pc
         k_pc = self.cas_type_eris.k_pc
-        # F2^pp_ii terms - p uncontracted w/ density matrix
-        Horb_diag[:,:ncore] += 6*k_pc - 2*j_pc
-        for p in range (nmo):
-            pqaa = self.cas_type_eris.ppaa[p]
-            paqa = self.cas_type_eris.papa[p]
-            paqa_as = paqa + paqa.transpose (2,1,0)
-            # F2^pp_aa terms - p uncontracted w/ density matrix
-            jaa, kaa = pqaa[p], paqa[:,p]
-            Horb_diag[p] += 2 * lib.einsum ('ab,ia,ib->i',kaa,dm1_pa,dm1_pa)
-            Horb_diag[p] -= lib.einsum ('ab,sia,sib->i',jaa+kaa,dm1s_pa,dm1s_pa)
-            # F2^ja_aj terms - both indices contracted w/ density matrix
-            if p > nocc: continue
-            Horb_diag[p,ncore:nocc] -= 2 * lib.einsum ('jab,j,ab->a',pqaa,dm1[p],dm1_aa)
-            Horb_diag[p,ncore:nocc] += lib.einsum ('bja,sj,sab->a',paqa_as,dm1s[:,p],dm1s_aa)
-            if p < ncore:
-                Horb_diag[ncore:nocc,p] -= 2 * lib.einsum ('jab,j,ab->a',pqaa,dm1[p],dm1_aa)
-                Horb_diag[ncore:nocc,p] += lib.einsum ('bja,sj,sab->a',paqa_as,dm1s[:,p],dm1s_aa)
+        # F2pipi
+        Horb_diag[:,:ncore] = 6*k_pc - 2*j_pc
+        # F2uaua
+        Horb_ua = Horb_diag[:,ncore:nocc]
+        for u in range (nmo):
+            if (u>=ncore) and (u<nocc): continue
+            uubb = self.cas_type_eris.ppaa[u][u]
+            ubub = self.cas_type_eris.papa[u][:,u]
+            Horb_ua[u] = lib.einsum ('bc,bca->a',uubb,d2_aabb)
+            Horb_ua[u] += lib.einsum ('bc,bca->a',ubub,d2_abab)
         return Horb_diag
 
-    def _get_Horb_diag_presymm_2cum (self):
+    def _get_Horb_diag_presymm_eri_F2aiia (self):
+        # Both indices must have nonzero density matrix for this term
         nmo, ncore, nocc = self.nmo, self.ncore, self.nocc
-        Horb_diag = np.zeros ((nmo,nmo), dtype=self.dtype)
-        for p in range (nmo):
-            ppaa = self.cas_type_eris.ppaa[p][p]
-            papa = self.cas_type_eris.papa[p][:,p]
-            # F2^pp_aa terms - p uncontracted w/ density matrix
-            Horb_diag[p,ncore:nocc] += lib.einsum ('ab,qqab->q', ppaa, self.cascm2)
-            Horb_diag[p,ncore:nocc] += lib.einsum ('ab,qaqb->q', papa, self.cascm2)
-            Horb_diag[p,ncore:nocc] += lib.einsum ('ab,qabq->q', ppaa, self.cascm2)
+        Horb_diag = np.zeros ((nmo, nmo), dtype=self.dtype)
+        dm1_cas = self.dm1s[:,ncore:nocc,ncore:nocc].sum (0)
+        Horb_pa = Horb_diag[:,ncore:nocc]
+        for i in range (ncore):
+            iibb = self.cas_type_eris.ppaa[i][i]
+            ibib = self.cas_type_eris.papa[i][:,i]
+            # 1 factor of 2 from ERI permutations
+            # 1 factor of 2 from rdm1 of core orbitals
+            Horb_pa[i] += 4*lib.einsum ('ab,ab->a',iibb,dm1_cas)
+            # 1 factor of 2 from ERI permutations
+            Horb_pa[i] -= 2*lib.einsum ('ab,ab->a',ibib,dm1_cas)
+        # electron1 <-> electron2
+        # not to be confused with the final p,q <-> q,p symmetrization
+        # This is just to fill out the nonzero elements of the pre-symmetrized object
+        Horb_diag += Horb_diag.T
         return Horb_diag
 
     def _get_Horb_diag_presymm (self):
         Horb_diag = self._get_Horb_diag_presymm_fock ()
         self._init_eri_()
-        Horb_diag += self._get_Horb_diag_presymm_split_cx ()
-        Horb_diag += self._get_Horb_diag_presymm_2cum ()
+        Horb_diag += self._get_Horb_diag_presymm_eri_F2aaaa ()
+        Horb_diag += self._get_Horb_diag_presymm_eri_F2ujuj ()
+        Horb_diag -= self._get_Horb_diag_presymm_eri_F2aiia ()
         return Horb_diag
 
     def _get_Horb_diag (self):
