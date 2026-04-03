@@ -1355,8 +1355,8 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
         Horb_diag = self._get_Horb_diag_presymm_fock ()
         self._init_eri_()
         Horb_diag += self._get_Horb_diag_presymm_eri_F2aaaa ()
-        #Horb_diag += self._get_Horb_diag_presymm_eri_F2ujuj ()
-        #Horb_diag -= self._get_Horb_diag_presymm_eri_F2aiia ()
+        Horb_diag += self._get_Horb_diag_presymm_eri_F2ujuj ()
+        Horb_diag -= self._get_Horb_diag_presymm_eri_F2aiia ()
         return Horb_diag
 
     def _get_Horb_diag (self):
