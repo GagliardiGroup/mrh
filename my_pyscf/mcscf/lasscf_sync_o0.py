@@ -1283,10 +1283,6 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
         fock = np.stack ([np.diag (h) for h in list (self.h1s)], axis=0)
         num = np.stack ([np.diag (d) for d in list (self.dm1s)], axis=0)
         Horb_diag = sum ([np.multiply.outer (f,n) for f,n in zip (fock, num)])
-        hcore = np.diag (self.hcore)
-        num = np.diag (self.dm1s.sum(0))
-        Horb_diag_bare = np.multiply.outer (hcore,num)
-        Horb_diag[:,ncore:nocc] = Horb_diag_bare[:,ncore:nocc]
         Horb_diag -= np.diag (self.fock1)[None,:]
         # This is where I stop unless I want to add the split-c and split-x terms
         # Split-c and split-x, for inactive-external rotations, requires I calculate a bunch
@@ -1296,13 +1292,20 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
     def _get_Horb_diag_presymm_eri_F2aaaa (self):
         nmo, ncore, nocc = self.nmo, self.ncore, self.nocc
         h2 = self.eri_paaa[ncore:nocc]
+        d1s = self.casdm1s
         d2 = self.casdm2
-        fock2 = lib.einsum ('pqij,rsij->pqrs', h2, d2)
-        fock2 += lib.einsum ('piqj,risj->pqrs', h2, d2)
-        fock2 += lib.einsum ('pjiq,rjis->pqrs', h2, d2)
-        Horb_aa = np.diagonal (fock2, axis1=1, axis2=3).copy ()
-        Horb_aa -= np.diagonal (fock2, axis1=0, axis2=1)
-        Horb_aa = np.diagonal (Horb_aa, axis1=0, axis2=1)
+        fock2 = lib.einsum ('pqij,rsij->prqs', h2, d2)
+        fock2 += lib.einsum ('piqj,risj->prqs', h2, d2)
+        fock2 += lib.einsum ('pjiq,rjis->prqs', h2, d2)
+        Horb_aa = np.diagonal (fock2, axis1=0, axis2=2).copy ()
+        Horb_aa -= np.diagonal (fock2, axis1=0, axis2=3)
+        Horb_aa = np.diagonal (Horb_aa, axis1=0, axis2=1).copy ()
+        # We double-counted g Da Da. Gotta subtract
+        v1s = -lib.einsum ('skl,kjil->sij', d1s, h2)
+        v1s += lib.einsum ('ijkl,kl->ij', h2, d1s.sum (0))[None,:,:]
+        fock = np.stack ([np.diag (h) for h in list (v1s)], axis=0)
+        num = np.stack ([np.diag (d) for d in list (d1s)], axis=0)
+        Horb_aa -= sum ([np.multiply.outer (f,n) for f,n in zip (fock, num)])
         Horb_diag = np.zeros ((nmo, nmo), dtype=self.dtype)
         Horb_diag[ncore:nocc,ncore:nocc] = Horb_aa
         return Horb_diag
@@ -1352,8 +1355,8 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
         Horb_diag = self._get_Horb_diag_presymm_fock ()
         self._init_eri_()
         Horb_diag += self._get_Horb_diag_presymm_eri_F2aaaa ()
-        Horb_diag += self._get_Horb_diag_presymm_eri_F2ujuj ()
-        Horb_diag -= self._get_Horb_diag_presymm_eri_F2aiia ()
+        #Horb_diag += self._get_Horb_diag_presymm_eri_F2ujuj ()
+        #Horb_diag -= self._get_Horb_diag_presymm_eri_F2aiia ()
         return Horb_diag
 
     def _get_Horb_diag (self):

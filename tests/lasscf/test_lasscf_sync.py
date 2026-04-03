@@ -36,6 +36,7 @@ las.kernel ()
 las.mo_coeff = np.loadtxt (os.path.join (topdir, 'test_lasci_mo.dat'))
 las.ci = [[np.loadtxt (os.path.join (topdir, 'test_lasci_ci0.dat'))],
           [-np.loadtxt (os.path.join (topdir, 'test_lasci_ci1.dat')).T]]
+
 ugg = las.get_ugg ()
 h_op = las.get_hop (ugg=ugg)
 nmo, ncore, nocc = h_op.nmo, h_op.ncore, h_op.nocc
