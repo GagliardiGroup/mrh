@@ -1347,9 +1347,9 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
             ibib = self.cas_type_eris.papa[i][:,i]
             # 1 factor of 2 from ERI permutations
             # 1 factor of 2 from rdm1 of core orbitals
-            Horb_pa[i] += 4*lib.einsum ('ab,ab->a',iibb,dm1_cas)
+            Horb_pa[i] += 4*lib.einsum ('ab,ab->a',ibib,dm1_cas)
             # 1 factor of 2 from ERI permutations
-            Horb_pa[i] -= 2*lib.einsum ('ab,ab->a',ibib,dm1_cas)
+            Horb_pa[i] -= lib.einsum ('ab,ab->a',ibib+iibb,dm1_cas)
         # electron1 <-> electron2
         # not to be confused with the final p,q <-> q,p symmetrization
         # This is just to fill out the nonzero elements of the pre-symmetrized object
