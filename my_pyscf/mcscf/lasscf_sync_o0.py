@@ -1312,10 +1312,15 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
 
     def _get_Horb_diag_presymm_eri_F2ujuj (self):
         nmo, ncore, nocc = self.nmo, self.ncore, self.nocc
-        d2 = self.casdm2
+        d1s = self.casdm1s
+        d1 = d1s.sum (0)
+        d1_ubub = 2*lib.einsum ('ab,ac->bca', d1, d1)
+        d1_uubb = -lib.einsum ('sab,sac->bca', d1s, d1s)
+        d1_ubub += d1_uubb
+        d2 = self.cascm2
         d2T = d2 + d2.transpose (0,1,3,2)
-        d2_aabb = np.diagonal (d2,axis1=0,axis2=1)
-        d2_abab = np.diagonal (d2T,axis1=0,axis2=2) 
+        d2_aabb = np.diagonal (d2,axis1=0,axis2=1) + d1_uubb
+        d2_abab = np.diagonal (d2T,axis1=0,axis2=2) + d1_ubub
         Horb_diag = np.zeros ((nmo, nmo), dtype=self.dtype)
         j_pc = self.cas_type_eris.j_pc
         k_pc = self.cas_type_eris.k_pc
