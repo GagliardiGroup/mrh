@@ -224,7 +224,7 @@ class KnownValues (unittest.TestCase):
         with self.subTest ('Hdiag'):
             self.assertAlmostEqual (lib.fp (Hdiag[:ugg.nvar_orb]), lib.fp (Hdiag_ref[:ugg.nvar_orb]), 7)
         self.assertTrue (las.converged)
-        las.run (conv_tol_grad=1e-7)
+        las.run (conv_tol_grad=1e-7, max_cycle_macro=300)
         self.assertTrue (las.converged)
         las.state_average_(weights=[1,0,0,0,0,0,0],
                            spins=[[0,],[2,],[0,],[-2,],[2,],[0,],[-2,],],

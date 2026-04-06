@@ -50,7 +50,7 @@ def setUpModule():
     # NOTE: Be careful about state selection. You have to select states that can actually be coupled
     # by a 1-body SOC operator. For instance, spins=[0,0] and spins=[2,2] would need at least a 2-body
     # operator to couple.
-    las2.kernel ()
+    las2.run (conv_tol_grad=1e-7)
     # Light speed value chosen because it changes the ground state from a triplet to 
     # a contaminated quasi-singlet.
     with lib.light_speed (5):
@@ -206,7 +206,8 @@ class KnownValues (unittest.TestCase):
         hso_ref[6,2] = -10524.501 + 0j # T(-1)
         hso_ref[5,0] =  0 - 18916.659j # T(0) < testing both this and T(+-1) is the reason I did 2 triplets
         
-        las = LASSCF (mf1, (6,), (8,), spin_sub=(1,), wfnsym_sub=('A1',)).run (conv_tol_grad=1e-7)
+        las = LASSCF (mf1, (6,), (8,), spin_sub=(1,), wfnsym_sub=('A1',)).run (conv_tol_grad=1e-7, max_cycle_macro=300)
+        self.assertTrue (las.converged)
         las.state_average_(weights=[1,0,0,0,0,0,0],
                            spins=[[0,],[2,],[0,],[-2,],[2,],[0,],[-2,],],
                            smults=[[1,],[3,],[3,],[3,],[3,],[3,],[3,],],
@@ -272,6 +273,7 @@ class KnownValues (unittest.TestCase):
 
     def test_soc_2frag (self):
         ## stationary test for >1 frag calc
+        self.assertTrue (lsi2._las.converged)
         with self.subTest (deltaE='SF'):
             self.assertAlmostEqual (lib.fp (lsi2._las.e_states), -214.8686632658775, 8)
         with self.subTest (opt=0, deltaE='SO'):
