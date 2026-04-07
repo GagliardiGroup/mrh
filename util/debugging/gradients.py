@@ -51,7 +51,8 @@ class GradientDebugger (object):
         self.x = g_vec.copy () 
         self.n = len (g_vec)
         self.dtype = g_vec.dtype
-        for key, val in kwargs.items (): self.key = val
+        self.__dict__.update (**kwargs)
+        self.x = np.atleast_1d (self.x).astype (self.dtype)
         if not hasattr (self, 'f0'): f0 = f_op (np.zeros (self.n, dtype=self.dtype))
         self.f_op = lambda x: np.squeeze (f_op (x) - f0)
         if not hasattr (self, 'divs'): self.set_divrange_()
@@ -61,8 +62,11 @@ class GradientDebugger (object):
         if exps is None: exps=self.exps
         self.divs = [base ** exp for exp in exps]
 
+    def get_epstable (self):
+        return epstable (self.f_op, self.g_vec, self.x, self.divs)
+
     def run (self):
-        self.epstable = epstable (self.f_op, self.g_vec, self.x, self.divs)
+        self.epstable = self.get_epstable ()
         self.fit = scipy.optimize.curve_fit (
             fit_fn,
             self.epstable[:,0],
