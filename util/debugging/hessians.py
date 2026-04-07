@@ -35,8 +35,8 @@ def epstable (f_op, j_op, x, divs):
     xs = table[:,0]
     epss = table[:,1]
     xs[:] = x_norm / divs
-    fs = [f_op (x/div) for div in divs]
-    epss[:] = [linalg.norm (f-(jx/div)) / linalg.norm (f)
+    fs = [div * f_op (x/div) for div in divs]
+    epss[:] = [linalg.norm (f-jx) / linalg.norm (f)
                for f, div in zip (fs, divs)]
     return table
 
@@ -44,7 +44,10 @@ class HessianDebugger (gradients.GradientDebugger):
     def __init__(self, f_op, j_op, n, dtype=float, **kwargs):
         self.n = n
         self.dtype = dtype
-        if not hasattr (self, 'f0'): f0 = f_op (np.zeros (self.n, dtype=self.dtype))
+        if 'f0' not in kwargs:
+            f0 = f_op (np.zeros (self.n, dtype=self.dtype))
+        else:
+            f0 = kwargs['f0']
         self.x = f0.copy ()
         self.f_op = lambda x: np.squeeze (f_op (x) - f0)
         self.j_op = j_op

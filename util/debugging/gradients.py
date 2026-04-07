@@ -67,13 +67,17 @@ class GradientDebugger (object):
 
     def run (self):
         self.epstable = self.get_epstable ()
-        self.fit = scipy.optimize.curve_fit (
-            fit_fn,
-            self.epstable[:,0],
-            self.epstable[:,1],
-            p0=[1,1,0],
-            bounds=([-np.inf,0,-np.inf],np.inf)
-        )
+        try:
+            self.fit = scipy.optimize.curve_fit (
+                fit_fn,
+                self.epstable[:,0],
+                self.epstable[:,1],
+                p0=[1,1,0],
+                bounds=([-np.inf,0,-np.inf],np.inf)
+            )
+        except RuntimeError as err:
+            print (self.epstable)
+            raise (err) from None
         self.error = self.fit[0][2]
         self.slope = self.fit[0][1]
         return self
