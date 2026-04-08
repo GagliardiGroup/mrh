@@ -73,7 +73,8 @@ class GradientDebugger (object):
                 self.epstable[:,0],
                 self.epstable[:,1],
                 p0=[1,1,0],
-                bounds=([-np.inf,0,-np.inf],np.inf)
+                bounds=([-np.inf,0,-np.inf],np.inf),
+                sigma=self.epstable[:,0]/100
             )
         except RuntimeError as err:
             print (self.epstable)
