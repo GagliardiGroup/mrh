@@ -36,6 +36,7 @@ las.kernel ()
 las.mo_coeff = np.loadtxt (os.path.join (topdir, 'test_lasci_mo.dat'))
 las.ci = [[np.loadtxt (os.path.join (topdir, 'test_lasci_ci0.dat'))],
           [-np.loadtxt (os.path.join (topdir, 'test_lasci_ci1.dat')).T]]
+
 ugg = las.get_ugg ()
 h_op = las.get_hop (ugg=ugg)
 nmo, ncore, nocc = h_op.nmo, h_op.ncore, h_op.nocc
@@ -75,6 +76,23 @@ class KnownValues(unittest.TestCase):
     def test_hessian (self):
         hx = h_op._matvec (x)
         self.assertAlmostEqual (lib.fp (hx), 179.27239294630812, 7)
+
+    def test_horb_diag (self):
+        hdiag = itsec (*ugg.unpack (h_op._get_Hdiag ()))
+        #refs = np.zeros_like (x)
+        #xp = x.copy ()
+        #for i in range (len (x)):
+        #    xp[:] = 0
+        #    xp[i] = 1
+        #    refs[i] = h_op (xp)[i]
+        #refs = itsec (*ugg.unpack (refs))
+        refs = [3.7405405082442176,
+                0.6734009953588086,
+                15.20141326836336,
+                -2.5826328497194897]
+        for sec, test, ref in zip (sectors, hdiag, refs):
+            with self.subTest (sector=sec):
+                self.assertAlmostEqual (lib.fp (test), ref, 6)
 
     def test_hc2 (self):
         xp = x.copy ()
@@ -140,7 +158,7 @@ class KnownValues(unittest.TestCase):
     def test_prec (self):
         M_op = h_op.get_prec ()
         Mx = M_op._matvec (x)
-        self.assertAlmostEqual (lib.fp (Mx), 0.6376305050505824, 6)
+        self.assertAlmostEqual (lib.fp (Mx), 2.1796310310541243, 6)
 
 
 if __name__ == "__main__":
