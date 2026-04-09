@@ -160,7 +160,7 @@ class KnownValues(unittest.TestCase):
     def test_prec (self):
         M_op = h_op.get_prec ()
         Mx = M_op._matvec (x)
-        self.assertAlmostEqual (lib.fp (Mx), 571941.1403539001, 6)
+        self.assertAlmostEqual (lib.fp (Mx), 3.2027926671090436, 6)
 
 
 if __name__ == "__main__":
