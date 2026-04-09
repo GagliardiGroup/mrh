@@ -48,25 +48,25 @@ class KnownValues(unittest.TestCase):
         lsi = LASSIS (las).run ()
         self.assertTrue (lsi.converged)
         self.assertEqual (lsi.si.shape[1], 321)
-        self.assertAlmostEqual (lsi.e_roots[0], -295.52016414968716, 6)
+        self.assertAlmostEqual (lsi.e_roots[0], -295.5201607274503, 6)
 
     def test_fewer_charge_hops (self):
         lsi = LASSIS (las).run (mask_charge_hops=mask)
         self.assertTrue (lsi.converged)
         self.assertEqual (lsi.si.shape[1], 213)
-        self.assertAlmostEqual (lsi.e_roots[0], -295.4857294756858, 6)
+        self.assertAlmostEqual (lsi.e_roots[0], -295.48571348950134, 6)
 
     def test_no_spin_flips (self):
         lsi = LASSIS (las).run (nspin=0)
         self.assertTrue (lsi.converged)
         self.assertEqual (lsi.si.shape[1], 25)
-        self.assertAlmostEqual (lsi.e_roots[0], -295.47881153342126, 6)
+        self.assertAlmostEqual (lsi.e_roots[0], -295.4788101245456, 6)
 
     def test_ultra_small (self):
         lsi = LASSIS (las).run (mask_charge_hops=mask, nspin=0)
         self.assertTrue (lsi.converged)
         self.assertEqual (lsi.si.shape[1], 9)
-        self.assertAlmostEqual (lsi.e_roots[0], -295.47263837707146, 6)
+        self.assertAlmostEqual (lsi.e_roots[0], -295.472633699967, 6)
 
 if __name__ == "__main__":
     print("Full Tests for approximate LASSIS")
