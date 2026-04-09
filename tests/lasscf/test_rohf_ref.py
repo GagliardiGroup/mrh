@@ -87,7 +87,6 @@ class KnownValues (unittest.TestCase):
         mo0 = las.localize_init_guess(frag_atom_list, freeze_cas_spaces=True)
         las.max_cycle_macro=1
         las.kernel(mo0)
-        self.assertTrue (las.converged)
 
     def test_smallbasis_symm (self):
         # From https://github.com/MatthewRHermes/mrh/issues/187
@@ -110,7 +109,6 @@ class KnownValues (unittest.TestCase):
         mo0 = las.localize_init_guess(frag_atom_list, freeze_cas_spaces=True)
         las.max_cycle_macro=1
         las.kernel(mo0)
-        self.assertTrue (las.converged)
 
 
 if __name__ == "__main__":

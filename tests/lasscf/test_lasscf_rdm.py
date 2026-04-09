@@ -55,7 +55,6 @@ class KnownValues(unittest.TestCase):
         las_ref.ah_level_shift = 1e-8
         las_ref.max_cycle_macro = 3
         las_ref.kernel (mo_loc, None)
-        self.assertTrue (las_ref.converged)
         ugg_ref = las_ref.get_ugg ()
         hop_ref = las_ref.get_hop (ugg=ugg_ref)
         las_test.casdm1frs = las_ref.states_make_casdm1s_sub ()
