@@ -32,6 +32,7 @@ def setUpModule ():
     las = LASSCF (mf, (4,2,4), ((2,2),(1,1),(2,2)), spin_sub=(1,1,1))
     mo_coeff = las.localize_init_guess ([[0,1,2],[3,4,5,6],[7,8,9]])
     las.kernel (mo_coeff)
+    assert (las.converged)
     mask = np.ones ((3,3), dtype=bool)
     mask[0,2] = mask[2,0] = False
 

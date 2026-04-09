@@ -47,6 +47,7 @@ class KnownValues(unittest.TestCase):
     def test_energy_slow (self):
         las = LASSCF (mf, (4,), (4,), spin_sub=(1,)).set (conv_tol_grad=1e-5)
         las.state_average_(weights=[0.5,0.5], spins=[0,2]).run ()
+        self.assertTrue (las.converged)
         self.assertAlmostEqual (las.e_tot, mc.e_tot, 8)
         self.assertAlmostEqual (las.e_states[0], mc.e_states[0], 7)
         self.assertAlmostEqual (las.e_states[1], mc.e_states[1], 7)
@@ -54,6 +55,7 @@ class KnownValues(unittest.TestCase):
     def test_energy_df_slow (self):
         las = LASSCF (mf_df, (4,), (4,), spin_sub=(1,)).set (conv_tol_grad=1e-5)
         las.state_average_(weights=[0.5,0.5], charges=[0,0], spins=[0,2], smults=[1,3]).run ()
+        self.assertTrue (las.converged)
         self.assertAlmostEqual (las.e_tot, mc_df.e_tot, 8)
         self.assertAlmostEqual (las.e_states[0], mc_df.e_states[0], 7)
         self.assertAlmostEqual (las.e_states[1], mc_df.e_states[1], 7)
@@ -62,6 +64,7 @@ class KnownValues(unittest.TestCase):
         np.random.seed(1)
         las = LASSCF (mf, (4,), (4,), spin_sub=(1,)).set (max_cycle_macro=1, ah_level_shift=0)
         las.state_average_(weights=[0.5,0.5], charges=[0,0], spins=[0,2], smults=[1,3]).run ()
+        self.assertTrue (las.converged)
         ugg = las.get_ugg ()
         ci0_csf = [np.random.rand (ncsf) for ncsf in ugg.ncsf_sub[0]]
         ci0_csf = [c / np.linalg.norm (c) for c in ci0_csf]
@@ -111,6 +114,7 @@ class KnownValues(unittest.TestCase):
         np.random.seed(1)
         las = LASSCF (mf_df, (4,), (4,), spin_sub=(1,)).set (max_cycle_macro=1, ah_level_shift=0)
         las.state_average_(weights=[0.5,0.5], charges=[0,0], spins=[0,2], smults=[1,3]).run ()
+        self.assertTrue (las.converged)
         ugg = las.get_ugg ()
         ci0_csf = [np.random.rand (ncsf) for ncsf in ugg.ncsf_sub[0]]
         ci0_csf = [c / np.linalg.norm (c) for c in ci0_csf]
