@@ -71,8 +71,6 @@ def _perturb_wfn (imc):
     umat = linalg.expm (kappa)
     imc.mo_coeff = imc.mo_coeff @ umat
     imc.kernel ()
-    with kv.subTest ('impurity CASSCF perturbation converged'):
-        kv.assertTrue (imc.converged)
     return imc
 
 class KnownValues (unittest.TestCase):
@@ -81,6 +79,7 @@ class KnownValues (unittest.TestCase):
         imc = _make_imc (self)
         _test_results (self, imc, 'construction')
         imc = _perturb_wfn (imc)
+        self.assertTrue (imc.converged)
         _test_results (self, imc, 'optimization')
 
 if __name__ == "__main__":
