@@ -1045,7 +1045,7 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
         ci2 = [[x+y for x,y in zip (xr, yr)] for xr, yr in zip (ci2, ci3)]
         t1 = extra_timer ('LASSCF sync Hessian operator 7: level shift', *t1)
 
-        Hx = self.ugg.pack (kappa2/2, ci2)
+        Hx = self.ugg.pack (kappa2, ci2)
         t1 = extra_timer ('LASSCF sync Hessian operator 8: pack', *t1)
         t0 = log.timer ('LASSCF sync Hessian operator total', *t0)
         return Hx
@@ -1376,7 +1376,7 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
     def _get_Horb_diag (self):
         Horb_diag = self._get_Horb_diag_presymm ()
         Horb_diag += Horb_diag.T
-        return Horb_diag[self.ugg.uniq_orb_idx]*.5
+        return Horb_diag[self.ugg.uniq_orb_idx]
 
     def _get_Hci_diag (self):
         Hci_diag = []
