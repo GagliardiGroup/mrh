@@ -1045,7 +1045,7 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
         ci2 = [[x+y for x,y in zip (xr, yr)] for xr, yr in zip (ci2, ci3)]
         t1 = extra_timer ('LASSCF sync Hessian operator 7: level shift', *t1)
 
-        Hx = self.ugg.pack (kappa2/2, ci2)
+        Hx = self.ugg.pack (kappa2, ci2)
         t1 = extra_timer ('LASSCF sync Hessian operator 8: pack', *t1)
         t0 = log.timer ('LASSCF sync Hessian operator total', *t0)
         return Hx
@@ -1254,26 +1254,17 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
         # than .5*pi (a step of exactly .5*pi transposes two states). This preconditioner should
         # mask out the corresponding degrees of freedom
         g_vec = self.get_grad ()
-        # FIXME: the change below is a HACK that fixes one unit test ACCIDENTALLY
-        # The actual problem is something to do with the Hessian or Hessian-vector product in CI
-        # sector with point-group symmetry enabled
-        #b = linalg.norm (g_vec)
-        b = np.abs (g_vec)
-        b[b<1e-12] = 1e-12
+        b = linalg.norm (g_vec)
         probe_x0 = b/Hdiag
         log.debug ('|probe_x0| / ndeg = %g', linalg.norm (probe_x0) / len (probe_x0))
         ndeg = len (probe_x0)
-        # FIXME: the change below is a HACK that fixes one unit test ACCIDENTALLY 
-        #idx_unstable = np.abs (probe_x0) > np.pi*.5
-        idx_unstable = np.abs (probe_x0) > np.pi
+        idx_unstable = np.abs (probe_x0) > np.pi*.5
         # We can't mask everything, because that behavior would obfuscate the problem
         # If NO stable D.O.F. exist, then keyframe is just bad and it has to be handled upstream
         ndeg_unstable = np.count_nonzero (idx_unstable)
         ndeg_stable = np.count_nonzero (~idx_unstable)
         g_unst = linalg.norm (g_vec[idx_unstable]) if ndeg_unstable else 0
-        # FIXME: the change below is a HACK that fixes one unit test ACCIDENTALLY 
-        #if ndeg_stable and (round (g_unst/b, 2) < 1):
-        if ndeg_stable and (round (g_unst/linalg.norm (b), 2) < 1):
+        if ndeg_stable and (round (g_unst/b, 2) < 1):
             Hdiag[idx_unstable] = np.inf
             ndeg_unstable = ndeg - ndeg_stable
             log.debug ('%d/%d d.o.f. masked in LASSCF sync preconditioner (masked gradient = %g)',
@@ -1376,7 +1367,7 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
     def _get_Horb_diag (self):
         Horb_diag = self._get_Horb_diag_presymm ()
         Horb_diag += Horb_diag.T
-        return Horb_diag[self.ugg.uniq_orb_idx]*.5
+        return Horb_diag[self.ugg.uniq_orb_idx]
 
     def _get_Hci_diag (self):
         Hci_diag = []
