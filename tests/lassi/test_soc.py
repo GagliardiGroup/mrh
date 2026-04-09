@@ -51,6 +51,7 @@ def setUpModule():
     # by a 1-body SOC operator. For instance, spins=[0,0] and spins=[2,2] would need at least a 2-body
     # operator to couple.
     las2.run (conv_tol_grad=1e-7)
+    assert (las2.converged)
     # Light speed value chosen because it changes the ground state from a triplet to 
     # a contaminated quasi-singlet.
     with lib.light_speed (5):
