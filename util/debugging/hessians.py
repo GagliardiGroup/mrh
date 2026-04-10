@@ -75,6 +75,57 @@ class HessianDebugger (gradients.GradientDebugger):
         t =  epstable (self.f_op, self.j_op, self.x, self.divs, self.facs)
         return t
 
+    def split (self, slices, labels=None, slicesy=None, labelsy=None):
+        slicesx = slices
+        labelsx = labels
+        if labelsy is None: labelsy = labels
+        if slicesy is None: slicesy = slices
+        slicesx = [0,] + list (slicesx) + [self.shape[0],]
+        slicesy = [0,] + list (slicesy) + [self.shape[1],]
+        subproblems = []
+        for i in range (len (slicesx) - 1):
+            p, q = slicesx[i:i+2].copy ()
+            for j in range (len (slicesy) - 1):
+                r, s = slicesy[j:j+2].copy ()
+                myname = None
+                if labelsx is not None:
+                    myname = labelsx[i] + ',' + labelsy[i]
+                subproblems.append (self.subproblem (p, q, r, s, name=myname))
+        return subproblems
+
+    def subproblem (self, p, q, r, s, name=None):
+        def f1 (x1):
+            x = np.zeros_like (self.x)
+            x[r:s] = x1[:]
+            return self.f_op (x)[p:q]
+        f1op = sparse_linalg.LinearOperator (
+            shape=(q-p,s-r),
+            dtype=self.dtype,
+            matvec=f1
+        )
+        def j1 (x1):
+            x = np.zeros_like (self.x)
+            x[r:s] = x1[:]
+            return self.j_op (x)[p:q]
+        j1op = sparse_linalg.LinearOperator (
+            shape=(q-p,s-r),
+            dtype=self.dtype,
+            matvec=j1
+        )
+        if name is not None:
+            if self.name is not None:
+                name = self.name + ' ' + name
+        kwargs = {key: val for key, val in self.__dict__.items ()}
+        kwargs.pop ('f_op')
+        kwargs.pop ('j_op')
+        kwargs['x'] = self.x[r:s].copy ()
+        kwargs['name'] = name
+        kwargs['f0'] = np.zeros ((q-p), dtype=self.dtype)
+        kwargs['shape'] = (q-p,s-r)
+        dbg = HessianDebugger (f1op, j1op, **kwargs)
+        return dbg
+
+
 if __name__=='__main__':
     f = lambda x: np.sin (x+np.pi*.25)
     dbg = HessianDebugger (f, lambda x:np.sqrt(1/2), shape=(1,1), x=1, exps=range(5,20)).run ()

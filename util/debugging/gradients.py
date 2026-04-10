@@ -89,9 +89,14 @@ class GradientDebugger (object):
         if name is not None:
             if self.name is not None:
                 name = self.name + ' ' + name
-        dbg = GradientDebugger (f1, g1, base=self.base, exps=self.exps, window=self.window,
-                                tol=self.tol, facs=self.facs, name=name, f0=0,
-                                x=self.x[p:q].copy ())
+        kwargs = {key: val for key, val in self.__dict__.items ()}
+        kwargs.pop ('f_op')
+        kwargs.pop ('g_vec')
+        kwargs['x'] = self.x[p:q].copy ()
+        kwargs['name'] = name
+        kwargs['f0'] = 0
+        kwargs['shape'] = (q-p,)
+        dbg = GradientDebugger (f1, g1, **kwargs)
         return dbg
 
     def set_divrange_(self, base=None, exps=None):
