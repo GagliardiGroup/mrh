@@ -925,7 +925,7 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
         ncore, nocc, nroots = self.ncore, self.nocc, self.nroots
         tdm1s_sa = np.einsum ('rspq,r->spq', tdm1rs, self.weights)
         dm1s_mo = odm1s + odm1s.transpose (0,2,1)
-        dm1s_mo[:,ncore:nocc,ncore:nocc] += tdm1s_sa
+        dm1s_mo[:,ncore:nocc,ncore:nocc] += 2*tdm1s_sa
         mo = self.mo_coeff
         moH = mo.conjugate ().T
         t1 = lib.logger.timer (self.las, 'LASSCF get_veff_Heff 1', *t0)
@@ -1032,7 +1032,7 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
         t1 = extra_timer ('LASSCF sync Hessian operator 3: effective potentials', *t1)
 
         # Responses!
-        kappa2 = self.orbital_response (kappa1, odm1s, ocm2, tdm1rs, tcm2, veff_prime)
+        kappa2 = self.orbital_response (kappa1, odm1s, ocm2, tdm1rs*2, tcm2*2, veff_prime)
         t1 = extra_timer ('LASSCF sync Hessian operator 4: (Hx)_orb', *t1)
         ci2 = self.ci_response_offdiag (kappa1, h1s_prime)
         t1 = extra_timer ('LASSCF sync Hessian operator 5: (Hx)_CI offdiag', *t1)
