@@ -63,9 +63,36 @@ class GradientDebugger (object):
         self.dtype = g_vec.dtype
         self.__dict__.update (**kwargs)
         self.x = np.atleast_1d (self.x).astype (self.dtype)
-        if not hasattr (self, 'f0'): f0 = f_op (np.zeros (self.shape, dtype=self.dtype))
+        if not hasattr (self, 'f0'):
+            f0 = f_op (np.zeros (self.shape, dtype=self.dtype))
+        else:
+            f0 = self.f0
         self.f_op = lambda x: np.squeeze (f_op (x) - f0)
         if not hasattr (self, 'divs'): self.set_divrange_()
+
+    def split (self, slices, labels=None):
+        slices = [0,] + list (slices) + [self.shape[0],]
+        subproblems = []
+        for i in range (len (slices)-1):
+            myname = None
+            if labels is not None:
+                myname = labels[i]
+            subproblems.append (self.subproblem (slices[i], slices[i+1], name=myname))
+        return subproblems
+
+    def subproblem (self, p, q, name=None):
+        g1 = self.g_vec[p:q]
+        def f1 (x1):
+            x = np.zeros_like (self.x)
+            x[p:q] = x1[:]
+            return self.f_op (x)
+        if name is not None:
+            if self.name is not None:
+                name = self.name + ' ' + name
+        dbg = GradientDebugger (f1, g1, base=self.base, exps=self.exps, window=self.window,
+                                tol=self.tol, facs=self.facs, name=name, f0=0,
+                                x=self.x[p:q].copy ())
+        return dbg
 
     def set_divrange_(self, base=None, exps=None):
         if base is None: base=self.base
