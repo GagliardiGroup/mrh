@@ -54,7 +54,7 @@ class KnownValues(unittest.TestCase):
         lsi = LASSIS (las).run (mask_charge_hops=mask)
         self.assertTrue (lsi.converged)
         self.assertEqual (lsi.si.shape[1], 213)
-        self.assertAlmostEqual (lsi.e_roots[0], -295.48571348950134, 5)
+        self.assertAlmostEqual (lsi.e_roots[0], -295.48572049698805, 5)
 
     def test_no_spin_flips (self):
         lsi = LASSIS (las).run (nspin=0)

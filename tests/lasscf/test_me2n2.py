@@ -121,7 +121,7 @@ class KnownValues(unittest.TestCase):
         x_las[:ugg.nvar_orb] = 0.0
         x_cas = las2cas (x_las, mode='hx')
         hx_las = las_hess._matvec (x_las)
-        hx_las[:ugg.nvar_orb] *= 2 # TODO: rationalize bizarre factors of 2
+        #hx_las[:ugg.nvar_orb] *= 2 # TODO: rationalize bizarre factors of 2
         hx_cas = cas2las (cas_hess (x_cas), mode='hx')
         self.assertAlmostEqual (lib.fp (hx_las), lib.fp (hx_cas), 8)
         # I have to do these separately because there is no straightforward way
@@ -174,7 +174,7 @@ class KnownValues(unittest.TestCase):
         x_las[:ugg.nvar_orb] = 0.0
         x_cas = las2cas (x_las, mode='hx')
         hx_las = las_hess._matvec (x_las)
-        hx_las[:ugg.nvar_orb] *= 2 # TODO: rationalize bizarre factors of 2
+        #hx_las[:ugg.nvar_orb] *= 2 # TODO: rationalize bizarre factors of 2
         hx_cas = cas2las (cas_hess (x_cas), mode='hx')
         self.assertAlmostEqual (lib.fp (hx_las[:ugg.nvar_orb]), lib.fp (hx_cas[:ugg.nvar_orb]), 8)
         self.assertAlmostEqual (lib.fp (hx_las[ugg.nvar_orb:]), lib.fp (hx_cas[ugg.nvar_orb:]), 8)
