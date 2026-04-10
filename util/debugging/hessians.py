@@ -76,11 +76,14 @@ class HessianDebugger (gradients.GradientDebugger):
         return t
 
 if __name__=='__main__':
-    dbg = HessianDebugger (np.sin, lambda x:x, shape=(1,1), x=1, exps=range(5,20)).run ()
+    f = lambda x: np.sin (x+np.pi*.25)
+    dbg = HessianDebugger (f, lambda x:np.sqrt(1/2), shape=(1,1), x=1, exps=range(5,20)).run ()
+    dbg.name = 'Correct implementation'
     print (dbg.error, dbg.slope)
     print (dbg.sprintf_results ())
     dbg.plot ('correct.eps')
-    dbg = HessianDebugger (np.sin, lambda x:1.0001*x, shape=(1,1), x=1).run ()
+    dbg = HessianDebugger (f, lambda x:0.7071*x, shape=(1,1), x=1).run ()
+    dbg.name = 'Incorrect implementation'
     print (dbg.error, dbg.slope)
     print (dbg.sprintf_results ())
     dbg.plot ('incorrect.eps')

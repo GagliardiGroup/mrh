@@ -53,6 +53,7 @@ class GradientDebugger (object):
     window=3
     tol=0.1
     facs = [1,-1,2,.5,-2,-.5]
+    name = None
     def __init__(self, f_op, g_vec, **kwargs):
         g_vec = np.atleast_1d (g_vec)
         self.g_vec = g_vec
@@ -110,16 +111,28 @@ class GradientDebugger (object):
         eps1 = [fit_fn (x, *self.fits[i-1][0]) for x in self.epstable[:,0]]
         plt.loglog (np.abs (self.epstable[:,0]), np.abs (self.epstable[:,i]), 'o',
                     np.abs (self.epstable[:,0]), np.abs (eps1), '-')
+        plt.xlabel ('||x||')
+        plt.ylabel ('epsilon(x)')
+        plt.gca ().set_aspect ('equal')
+        xmin, xmax = plt.xlim ()
+        ymin, ymax = plt.ylim ()
+        xrng = xmax / xmin
+        plt.ylim (ymax/xrng, ymax)
+        if self.name is not None:
+            plt.title (self.name)
         if fname is not None:
             plt.savefig (fname)
             plt.close ()
 
 if __name__=='__main__':
-    dbg = GradientDebugger (np.sin, 1.0).run ()
+    f = lambda x: np.sin (x+np.pi*.25)
+    dbg = GradientDebugger (f, np.sqrt (1/2)).run ()
+    dbg.name = 'Correct implementation'
     print (dbg.error, dbg.slope)
     print (dbg.sprintf_results ())
     dbg.plot ('correct.eps')
-    dbg = GradientDebugger (np.sin, 1.0001).run ()
+    dbg = GradientDebugger (f, 0.7071).run ()
+    dbg.name = 'Incorrect implementation'
     print (dbg.error, dbg.slope)
     print (dbg.sprintf_results ())
     dbg.plot ('incorrect.eps')
