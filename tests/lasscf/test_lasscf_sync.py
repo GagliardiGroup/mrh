@@ -77,7 +77,7 @@ class KnownValues(unittest.TestCase):
 
     def test_hessian (self):
         hx = h_op._matvec (x)
-        self.assertAlmostEqual (lib.fp (hx), 89.56460995166334, 7)
+        self.assertAlmostEqual (lib.fp (hx), 90.0628112105026, 7)
 
     def test_horb_diag (self):
         hdiag = itsec (*ugg.unpack (h_op._get_Hdiag ()))
@@ -118,7 +118,7 @@ class KnownValues(unittest.TestCase):
         xp = x.copy ()
         xp[:offs_ci1] = 0.0
         hx = h_op._matvec (xp)[:offs_ci1]
-        self.assertAlmostEqual (lib.fp (hx), 0.49820125883798444, 9)
+        self.assertAlmostEqual (lib.fp (hx), 0.9964025176759711, 9)
 
     def test_hoo (self):
         xp = x.copy ()

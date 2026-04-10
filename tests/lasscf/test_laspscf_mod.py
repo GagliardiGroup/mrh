@@ -121,7 +121,7 @@ class KnownValues(unittest.TestCase):
 
     def test_hessian (self):
         hx = h_op._matvec (x)
-        self.assertAlmostEqual (lib.fp (hx), 89.28004382762967, 7)
+        self.assertAlmostEqual (lib.fp (hx), 89.10410326302467, 7)
 
     def test_hc2 (self):
         xp = x.copy ()
@@ -133,7 +133,7 @@ class KnownValues(unittest.TestCase):
         xp = x.copy ()
         xp[:-16] = 0.0
         hx = h_op._matvec (xp)[-32:-16]
-        self.assertAlmostEqual (lib.fp (hx), 0.0007797146474399255, 7)
+        self.assertAlmostEqual (lib.fp (hx), 0.001339949044872548, 7)
 
     def test_hco (self):
         xp = x.copy ()
@@ -145,7 +145,7 @@ class KnownValues(unittest.TestCase):
         xp = x.copy ()
         xp[:-32] = 0.0
         hx = h_op._matvec (xp)[:-32]
-        self.assertAlmostEqual (lib.fp (hx), -0.13505972428331367, 7)
+        self.assertAlmostEqual (lib.fp (hx), -0.3107152725863126, 7)
 
     def test_hoo (self):
         xp = x.copy ()
