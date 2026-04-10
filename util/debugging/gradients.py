@@ -4,7 +4,7 @@ from scipy import linalg
 import itertools
 import matplotlib.pyplot as plt
 
-def epstable (f_op, g_vec, x, divs):
+def epstable (f_op, g_vec, x, divs, facs=None):
     '''Convergence table for evaluating analytical gradient functions using the error measure
 
     epsilon (x) = (f_op (x) - g_vec.x) / f_op (x)
@@ -21,20 +21,27 @@ def epstable (f_op, g_vec, x, divs):
         divs : ndarray of floats
             Divisors
 
+    Kwargs:
+        facs : sequence of floats
+            Factors of gx to include, to quickly check whether it's off by 1/2 or something.
+
     Returns:
-        table : ndarray of shape=(len(exp_range),2)
+        table : ndarray of shape=(len(exp_range),1+len(facs))
             Columns: ||x||, epsilon (x)
     '''
+    if facs is None: facs = [1,-1,2,.5,-2,-0.5]
     n = len (x)
     divs = np.asarray (divs)
     x_norm = linalg.norm (x)
     gx = np.dot (g_vec, x)
-    table = np.empty ((len (divs), 2), dtype=x.dtype)
+    table = np.empty ((len (divs), len (facs) + 1), dtype=x.dtype)
     xs = table[:,0]
-    epss = table[:,1]
+    fs = np.empty_like (xs)
     xs[:] = x_norm / divs
-    epss[:] = [f_op (x/div) for div in divs]
-    epss[:] = (epss - gx/divs) / epss
+    fs[:] = [f_op (x/div) for div in divs]
+    gx = gx * np.asarray (facs)[None,:] / divs[:,None]
+    fs = fs[:,None]
+    table[:,1:] = (fs - gx) / fs
     return table
 
 def fit_fn (x, a, p, c):
@@ -45,6 +52,7 @@ class GradientDebugger (object):
     exps=range(5,20)
     window=3
     tol=0.1
+    facs = [1,-1,2,.5,-2,-.5]
     def __init__(self, f_op, g_vec, **kwargs):
         g_vec = np.atleast_1d (g_vec)
         self.g_vec = g_vec
@@ -63,29 +71,44 @@ class GradientDebugger (object):
         self.divs = [base ** exp for exp in exps]
 
     def get_epstable (self):
-        return epstable (self.f_op, self.g_vec, self.x, self.divs)
+        return epstable (self.f_op, self.g_vec, self.x, self.divs, self.facs)
 
     def run (self):
         self.epstable = self.get_epstable ()
-        try:
-            self.fit = scipy.optimize.curve_fit (
-                fit_fn,
-                self.epstable[:,0],
-                self.epstable[:,1],
-                p0=[1,1,0],
-                bounds=([-np.inf,0,-np.inf],np.inf),
-                sigma=self.epstable[:,0]/100
-            )
-        except RuntimeError as err:
-            print (self.epstable)
-            raise (err) from None
-        self.error = self.fit[0][2]
-        self.slope = self.fit[0][1]
+        self.fits = []
+        self.errors = []
+        self.slopes = []
+        for i in range (1, self.epstable.shape[1]):
+            try:
+                self.fits.append (scipy.optimize.curve_fit (
+                    fit_fn,
+                    self.epstable[:,0],
+                    self.epstable[:,i],
+                    p0=[1,1,0],
+                    bounds=([-np.inf,0,-np.inf],np.inf),
+                    sigma=self.epstable[:,0]/100
+                ))
+            except RuntimeError as err:
+                print (self.epstable)
+                raise (err) from None
+            self.errors.append (self.fits[i-1][0][2])
+            self.slopes.append (self.fits[i-1][0][1])
+        self.fit = self.fits[0]
+        self.error = self.errors[0]
+        self.slope = self.slopes[0]
         return self
 
-    def plot (self, fname=None):
-        eps1 = [fit_fn (x, *self.fit[0]) for x in self.epstable[:,0]]
-        plt.loglog (np.abs (self.epstable[:,0]), np.abs (self.epstable[:,1]), 'o',
+    def sprintf_results (self):
+        lbls = ['fac', 'intercept', 'slope']
+        results = '{:>5s} {:>10s} {:>10s}\n'.format (*lbls)
+        fmt_str = '{:5.1f} {:10.3e} {:10.3e}\n'
+        for i in range (len (self.facs)):
+            results += fmt_str.format (self.facs[i], self.errors[i], self.slopes[i])
+        return results[:-1]
+
+    def plot (self, fname=None, i=1):
+        eps1 = [fit_fn (x, *self.fits[i-1][0]) for x in self.epstable[:,0]]
+        plt.loglog (np.abs (self.epstable[:,0]), np.abs (self.epstable[:,i]), 'o',
                     np.abs (self.epstable[:,0]), np.abs (eps1), '-')
         if fname is not None:
             plt.savefig (fname)
@@ -94,9 +117,11 @@ class GradientDebugger (object):
 if __name__=='__main__':
     dbg = GradientDebugger (np.sin, 1.0).run ()
     print (dbg.error, dbg.slope)
+    print (dbg.sprintf_results ())
     dbg.plot ('correct.eps')
     dbg = GradientDebugger (np.sin, 1.0001).run ()
     print (dbg.error, dbg.slope)
+    print (dbg.sprintf_results ())
     dbg.plot ('incorrect.eps')
 
 

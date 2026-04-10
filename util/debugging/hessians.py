@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from mrh.util.debugging import gradients
 from scipy.sparse import linalg as sparse_linalg
 
-def epstable (f_op, j_op, x, divs):
+def epstable (f_op, j_op, x, divs, facs=None):
     '''Convergence table for evaluating analytical gradient functions using the error measure
 
     epsilon (x) = (f_op (x) - g_vec.x) / f_op (x)
@@ -24,21 +24,26 @@ def epstable (f_op, j_op, x, divs):
         divs : ndarray of floats
             Divisors
 
+    Kwargs:
+        facs : sequence of floats
+            Factors of j_op (x) to include, to quickly check whether it's off by 1/2 or something.
+
     Returns:
         table : ndarray of shape=(len(exp_range),2)
             Columns: ||x||, epsilon (x)
     '''
+    if facs is None: facs = [1,-1,2,.5,-2,-0.5]
     n = len (x)
     divs = np.asarray (divs)
     x_norm = linalg.norm (x)
     jx = j_op (x)
-    table = np.empty ((len (divs), 2), dtype=x.dtype)
+    table = np.empty ((len (divs), len (facs) + 1), dtype=x.dtype)
     xs = table[:,0]
-    epss = table[:,1]
     xs[:] = x_norm / divs
     fs = [div * f_op (x/div) for div in divs]
-    epss[:] = [linalg.norm (f-jx) / linalg.norm (f)
-               for f, div in zip (fs, divs)]
+    for i, (f, div) in enumerate (zip (fs, divs)):
+        for j, fac in enumerate (facs):
+            table[i,j+1] = linalg.norm (f-(jx*fac)) / linalg.norm (f)
     return table
 
 class HessianDebugger (gradients.GradientDebugger):
@@ -67,15 +72,17 @@ class HessianDebugger (gradients.GradientDebugger):
         if not hasattr (self, 'divs'): self.set_divrange_()
 
     def get_epstable (self):
-        t =  epstable (self.f_op, self.j_op, self.x, self.divs)
+        t =  epstable (self.f_op, self.j_op, self.x, self.divs, self.facs)
         return t
 
 if __name__=='__main__':
     dbg = HessianDebugger (np.sin, lambda x:x, shape=(1,1), x=1, exps=range(5,20)).run ()
     print (dbg.error, dbg.slope)
+    print (dbg.sprintf_results ())
     dbg.plot ('correct.eps')
     dbg = HessianDebugger (np.sin, lambda x:1.0001*x, shape=(1,1), x=1).run ()
     print (dbg.error, dbg.slope)
+    print (dbg.sprintf_results ())
     dbg.plot ('incorrect.eps')
 
 
