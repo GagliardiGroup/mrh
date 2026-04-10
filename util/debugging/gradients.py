@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import scipy
 from scipy import linalg
@@ -107,9 +108,10 @@ class GradientDebugger (object):
             results += fmt_str.format (self.facs[i], self.errors[i], self.slopes[i])
         return results[:-1]
 
-    def plot (self, fname=None, i=1):
-        eps1 = [fit_fn (x, *self.fits[i-1][0]) for x in self.epstable[:,0]]
-        plt.loglog (np.abs (self.epstable[:,0]), np.abs (self.epstable[:,i]), 'o',
+    def plot (self, fname=None, i=0, title=None):
+        if title is None: title = self.name
+        eps1 = [fit_fn (x, *self.fits[i][0]) for x in self.epstable[:,0]]
+        plt.loglog (np.abs (self.epstable[:,0]), np.abs (self.epstable[:,i+1]), 'o',
                     np.abs (self.epstable[:,0]), np.abs (eps1), '-')
         plt.xlabel ('||x||')
         plt.ylabel ('epsilon(x)')
@@ -118,11 +120,20 @@ class GradientDebugger (object):
         ymin, ymax = plt.ylim ()
         xrng = xmax / xmin
         plt.ylim (ymax/xrng, ymax)
-        if self.name is not None:
-            plt.title (self.name)
+        if title is not None: plt.title (title)
         if fname is not None:
             plt.savefig (fname)
             plt.close ()
+
+    def plotall (self, fname, title=None):
+        if title is None: title = self.name
+        fhead, fext = os.path.splitext (fname) 
+        for i in range (len (self.facs)):
+            fname = '{}.{}{}'.format (fhead, self.facs[i], fext)
+            mytitle = 'factor = {}'.format (self.facs[i])
+            if title is not None:
+                mytitle = title + ' ({})'.format (mytitle)
+            self.plot (fname=fname, i=i, title=mytitle)
 
 if __name__=='__main__':
     f = lambda x: np.sin (x+np.pi*.25)
@@ -130,11 +141,13 @@ if __name__=='__main__':
     dbg.name = 'Correct implementation'
     print (dbg.error, dbg.slope)
     print (dbg.sprintf_results ())
-    dbg.plot ('correct.eps')
+    dbg.plot ('correct_gradient.eps')
+    dbg.plotall ('correct_gradient.eps')
     dbg = GradientDebugger (f, 0.7071).run ()
     dbg.name = 'Incorrect implementation'
     print (dbg.error, dbg.slope)
     print (dbg.sprintf_results ())
-    dbg.plot ('incorrect.eps')
+    dbg.plot ('incorrect_gradient.eps')
+    dbg.plotall ('incorrect_gradient.eps')
 
 

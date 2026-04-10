@@ -81,11 +81,13 @@ if __name__=='__main__':
     dbg.name = 'Correct implementation'
     print (dbg.error, dbg.slope)
     print (dbg.sprintf_results ())
-    dbg.plot ('correct.eps')
+    dbg.plot ('correct_hessian.eps')
+    dbg.plotall ('correct_hessian.eps')
     dbg = HessianDebugger (f, lambda x:0.7071*x, shape=(1,1), x=1).run ()
     dbg.name = 'Incorrect implementation'
     print (dbg.error, dbg.slope)
     print (dbg.sprintf_results ())
-    dbg.plot ('incorrect.eps')
+    dbg.plot ('incorrect_hessian.eps')
+    dbg.plotall ('incorrect_hessian.eps')
 
 
