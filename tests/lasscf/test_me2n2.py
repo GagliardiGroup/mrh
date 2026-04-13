@@ -93,17 +93,17 @@ class KnownValues(unittest.TestCase):
             return np.append (mc.pack_uniq_var (kappa), _pack_ci (ci1))
         def unpack_cas (x):
             return mc.unpack_uniq_var (x[:ugg.nvar_orb]), _unpack_ci (x[ugg.nvar_orb:])
-        def cas2las (y, mode='hx'):
+        def cas2las (y):
             yorb, yci = unpack_cas (y)
             yc = yci[0].ravel ().dot (ci0.ravel ())
             yci[0] -= yc * ci0
-            yorb *= (0.5 if mode=='hx' else 1)
+            yorb *= 0.5
             return ugg.pack (yorb, [yci])
-        def las2cas (y, mode='x'):
+        def las2cas (y):
             yorb, yci = ugg.unpack (y)
             yc = yci[0][0].ravel ().dot (ci0.ravel ())
             yci[0][0] -= yc * ci0
-            yorb *= (0.5 if mode=='x' else 1)
+            yorb *= 0.5
             return pack_cas (yorb, yci[0])
         cas_grad = cas2las (cas_grad)
         self.assertAlmostEqual (lib.fp (las_grad), lib.fp (cas_grad), 8)
@@ -111,18 +111,16 @@ class KnownValues(unittest.TestCase):
         # orb on input
         x_las = x.copy ()
         x_las[ugg.nvar_orb:] = 0.0
-        x_cas = las2cas (x_las, mode='x')
+        x_cas = las2cas (x_las)
         hx_las = las_hess._matvec (x_las)
-        hx_las[:ugg.nvar_orb] *= 2 # TODO: rationalize bizarre factors of 2
-        hx_cas = cas2las (cas_hess (x_cas), mode='x')
+        hx_cas = cas2las (cas_hess (x_cas))
         self.assertAlmostEqual (lib.fp (hx_las), lib.fp (hx_cas), 8)
         # CI on input
         x_las = x.copy ()
         x_las[:ugg.nvar_orb] = 0.0
-        x_cas = las2cas (x_las, mode='hx')
+        x_cas = las2cas (x_las)
         hx_las = las_hess._matvec (x_las)
-        #hx_las[:ugg.nvar_orb] *= 2 # TODO: rationalize bizarre factors of 2
-        hx_cas = cas2las (cas_hess (x_cas), mode='hx')
+        hx_cas = cas2las (cas_hess (x_cas))
         self.assertAlmostEqual (lib.fp (hx_las), lib.fp (hx_cas), 8)
         # I have to do these separately because there is no straightforward way
         # for H_co, H_oc, and H_cc to all be simultaneously correct given the
@@ -145,17 +143,17 @@ class KnownValues(unittest.TestCase):
             return np.append (mc_df.pack_uniq_var (kappa), _pack_ci (ci1))
         def unpack_cas (x):
             return mc_df.unpack_uniq_var (x[:ugg.nvar_orb]), _unpack_ci (x[ugg.nvar_orb:])
-        def cas2las (y, mode='hx'):
+        def cas2las (y):
             yorb, yci = unpack_cas (y)
             yc = yci[0].ravel ().dot (ci0.ravel ())
             yci[0] -= yc * ci0
-            yorb *= (0.5 if mode=='hx' else 1)
+            yorb *= 0.5
             return ugg.pack (yorb, [yci])
-        def las2cas (y, mode='x'):
+        def las2cas (y):
             yorb, yci = ugg.unpack (y)
             yc = yci[0][0].ravel ().dot (ci0.ravel ())
             yci[0][0] -= yc * ci0
-            yorb *= (0.5 if mode=='x' else 1)
+            yorb *= 0.5
             return pack_cas (yorb, yci[0])
         cas_grad = cas2las (cas_grad)
         self.assertAlmostEqual (lib.fp (las_grad), lib.fp (cas_grad), 8)
@@ -163,19 +161,17 @@ class KnownValues(unittest.TestCase):
         # orb on input
         x_las = x.copy ()
         x_las[ugg.nvar_orb:] = 0.0
-        x_cas = las2cas (x_las, mode='x')
+        x_cas = las2cas (x_las)
         hx_las = las_hess._matvec (x_las)
-        hx_las[:ugg.nvar_orb] *= 2 # TODO: rationalize bizarre factors of 2
-        hx_cas = cas2las (cas_hess (x_cas), mode='x')
+        hx_cas = cas2las (cas_hess (x_cas))
         self.assertAlmostEqual (lib.fp (hx_las[:ugg.nvar_orb]), lib.fp (hx_cas[:ugg.nvar_orb]), 8)
         self.assertAlmostEqual (lib.fp (hx_las[ugg.nvar_orb:]), lib.fp (hx_cas[ugg.nvar_orb:]), 8)
         # CI on input
         x_las = x.copy ()
         x_las[:ugg.nvar_orb] = 0.0
-        x_cas = las2cas (x_las, mode='hx')
+        x_cas = las2cas (x_las)
         hx_las = las_hess._matvec (x_las)
-        #hx_las[:ugg.nvar_orb] *= 2 # TODO: rationalize bizarre factors of 2
-        hx_cas = cas2las (cas_hess (x_cas), mode='hx')
+        hx_cas = cas2las (cas_hess (x_cas))
         self.assertAlmostEqual (lib.fp (hx_las[:ugg.nvar_orb]), lib.fp (hx_cas[:ugg.nvar_orb]), 8)
         self.assertAlmostEqual (lib.fp (hx_las[ugg.nvar_orb:]), lib.fp (hx_cas[ugg.nvar_orb:]), 8)
         # I have to do these separately because there is no straightforward way
