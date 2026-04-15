@@ -27,6 +27,10 @@ mf = scf.RHF (mol).run ()
 solver = csf_solver (mol, smult=1)
 mc = mcscf.CASSCF (mf, 6, 8).run (fcisolver=solver).newton ()
 mc.internal_rotation = True
+# ^ This is mandatory if the CI vector isn't optimized
+# There is a frame-rotation effect that can't be computed
+# if nonzero active-active orbital rotations are discarded
+# by the indexing
 mc.mo_coeff = mf.mo_coeff
 
 eris = mc.ao2mo ()
