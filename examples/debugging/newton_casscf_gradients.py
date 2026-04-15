@@ -26,7 +26,7 @@ mf = scf.RHF (mol).run ()
 
 solver = csf_solver (mol, smult=1)
 mc = mcscf.CASSCF (mf, 6, 8).run (fcisolver=solver).newton ()
-
+mc.internal_rotation = True
 mc.mo_coeff = mf.mo_coeff
 
 eris = mc.ao2mo ()
@@ -50,7 +50,9 @@ x_random = 1 - (2*rng.random ((nvar_tot)))
 ci0 = mc.ci.copy ()
 gorb0 = mc.unpack_uniq_var (g_vec[:nvar_orb])
 
-print ("gradnorms:", linalg.norm (g_vec[:nvar_orb]), linalg.norm (g_vec[nvar_orb:]))
+# This doesn't really work at a stationary point
+print ("Orbital sector gradient norm:", linalg.norm (g_vec[:nvar_orb]))
+print ("CI sector gradient norm:", linalg.norm (g_vec[nvar_orb:]))
 
 def energy_elec (mc):
     h1, h0 = mc.get_h1eff ()
@@ -70,7 +72,7 @@ def e_op (x):
     mc1.ci = ci
     return energy_elec (mc1) - e0
 
-dbg = GradientDebugger (e_op, g_vec).run ()
+dbg = GradientDebugger (e_op, g_vec, x=x_trial).run ()
 dbg.name = 'Gradient'
 print ('Gradient:\n', dbg.sprintf_results ())
 dbg.plot (os.path.join (folder, 'gradient.eps'))
@@ -88,7 +90,7 @@ def rotate_gorb (x, gorb, gci):
     # The CI sector doesn't have this problem because determinants don't change
     xorb = mc.unpack_uniq_var (x[:nvar_orb])
     nocc = mc.ncore + mc.ncas
-    gorb += (xorb @ gorb0 - gorb0 @ xorb) / 2
+    gorb += (xorb @ gorb0 - gorb0 @ xorb) / 2 
     gc = gci.ravel ().dot (ci0.ravel ())
     gci -= gc * ci0.ravel ()
     g = np.append (mc.pack_uniq_var (gorb), gci.ravel ())
@@ -109,7 +111,8 @@ def g_op (x):
     g1 = rotate_gorb (x, gorb, gci)
     return g1
 
-dbg = HessianDebugger (g_op, h_op, x=x_trial, dtype=float, shape=(nvar_tot,nvar_tot), exps=range(20)).run ()
+dbg = HessianDebugger (g_op, h_op, x=x_trial, dtype=float, shape=(nvar_tot,nvar_tot)).run ()
+dbg.name = 'Hessian'
 print ('Hessian:\n', dbg.sprintf_results ())
 dbg.plot (os.path.join (folder, 'hessian.eps'))
 dbgoo, dbgoc, dbgco, dbgcc = dbg.split ([nvar_orb,], ('orb', 'CI'))
