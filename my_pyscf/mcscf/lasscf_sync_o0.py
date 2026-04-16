@@ -24,10 +24,11 @@ def get_level_shift (trust_radius, prec_op, g):
     x = prec_op (-g)
     idx = np.argmax (np.abs (x))
     g, x = g[idx], x[idx]
-    sign = -1**(int (x<0))
     if abs (x) <= trust_radius: return 0
-    x0 = trust_radius if x >= 0 else -trust_radius
-    return (g/x0) - (g/x)
+    x0 = trust_radius if g < 0 else -trust_radius
+    shift = (g/x) - (g/x0)
+    assert (shift>=0), "{} {} {} {}".format (g, x, x0, shift)
+    return shift
 
 def kernel (las, mo_coeff=None, ci0=None, casdm0_fr=None, conv_tol_grad=1e-4, 
         assert_no_dupes=False, verbose=lib.logger.NOTE):
