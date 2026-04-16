@@ -20,15 +20,17 @@ localize_init_guess=lasscf_guess._localize
 class MicroIterInstabilityException (Exception):
     pass
 
-def get_level_shift (trust_radius, prec_op, g):
+def get_level_shift (trust_radius, prec_op, g, tol=1e-8):
     x = prec_op (-g)
-    idx = np.argmax (np.abs (x))
+    idx = np.abs (x) > tol
     g, x = g[idx], x[idx]
-    if abs (x) <= trust_radius: return 0
-    x0 = trust_radius if g < 0 else -trust_radius
+    if np.count_nonzero (np.abs (x) > trust_radius) == 0:
+        return 0
+    x0 = trust_radius * np.ones_like (x)
+    x0[g>0] = -trust_radius
     shift = (g/x) - (g/x0)
-    assert (shift>=0), "{} {} {} {}".format (g, x, x0, shift)
-    return shift
+    assert (shift.all ()>=0), "{} {} {} {}".format (g, x, x0, shift)
+    return shift.max ()
 
 def kernel (las, mo_coeff=None, ci0=None, casdm0_fr=None, conv_tol_grad=1e-4, 
         assert_no_dupes=False, verbose=lib.logger.NOTE):
@@ -128,6 +130,13 @@ def kernel (las, mo_coeff=None, ci0=None, casdm0_fr=None, conv_tol_grad=1e-4,
             assert (err < 1e-5), '{}'.format (err)
         gx = H_op.get_gx ()
         prec_op = H_op.get_prec ()
+        floating_level_shift = get_level_shift (las.trust_radius, prec_op, g_vec)
+        if floating_level_shift > 0:
+            log.debug ('Applying a floating level shift of %e', floating_level_shift)
+        prec_op.Hdiag += floating_level_shift
+        H_op.level_shift += floating_level_shift
+        err = get_level_shift (las.trust_radius, prec_op, g_vec)
+        assert (err < 1e-8), '{} {}'.format (floating_level_shift, err)
         norm_gorb = linalg.norm (g_vec[:ugg.nvar_orb]) if ugg.nvar_orb else 0.0
         norm_gci = linalg.norm (g_vec[ugg.nvar_orb:]) if ugg.ncsf_sub.sum () else 0.0
         norm_gx = linalg.norm (gx) if gx.size else 0.0
@@ -137,11 +146,6 @@ def kernel (las, mo_coeff=None, ci0=None, casdm0_fr=None, conv_tol_grad=1e-4,
         lib.logger.info (
             las, 'LASSCF macro %d : E = %.15g ; |g_int| = %.15g ; |g_ci| = %.15g ; |g_x| = %.15g',
             it, H_op.e_tot, norm_gorb, norm_gci, norm_gx)
-        floating_level_shift = get_level_shift (las.trust_radius, prec_op, g_vec)
-        if floating_level_shift > 0:
-            log.debug ('Applying a floating level shift of %e', floating_level_shift)
-        prec_op.Hdiag += floating_level_shift
-        H_op.level_shift += floating_level_shift       
         #log.info (
         #    ('LASSCF micro init : E = %.15g ; |g_orb| = %.15g ; |g_ci| = %.15g ; |x0_orb| = %.15g '
         #    '; |x0_ci| = %.15g'), H_op.e_tot, norm_gorb, norm_gci, norm_xorb, norm_xci)
@@ -1054,7 +1058,7 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
         t1 = extra_timer ('LASSCF sync Hessian operator 6: (Hx)_CI diag', *t1)
 
         # LEVEL SHIFT!!
-        kappa3, ci3 = self.ugg.unpack (self.level_shift * np.abs (x))
+        kappa3, ci3 = self.ugg.unpack (self.level_shift * x)
         kappa2 += kappa3
         ci2 = [[x+y for x,y in zip (xr, yr)] for xr, yr in zip (ci2, ci3)]
         t1 = extra_timer ('LASSCF sync Hessian operator 7: level shift', *t1)
