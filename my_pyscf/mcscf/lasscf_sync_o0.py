@@ -20,6 +20,15 @@ localize_init_guess=lasscf_guess._localize
 class MicroIterInstabilityException (Exception):
     pass
 
+def get_level_shift (trust_radius, prec_op, g):
+    x = prec_op (-g)
+    idx = np.argmax (np.abs (x))
+    g, x = g[idx], x[idx]
+    sign = -1**(int (x<0))
+    if abs (x) <= trust_radius: return 0
+    x0 = trust_radius if x >= 0 else -trust_radius
+    return (g/x0) - (g/x)
+
 def kernel (las, mo_coeff=None, ci0=None, casdm0_fr=None, conv_tol_grad=1e-4, 
         assert_no_dupes=False, verbose=lib.logger.NOTE):
     from mrh.my_pyscf.mcscf.lasci import _eig_inactive_virtual
@@ -127,6 +136,11 @@ def kernel (las, mo_coeff=None, ci0=None, casdm0_fr=None, conv_tol_grad=1e-4,
         lib.logger.info (
             las, 'LASSCF macro %d : E = %.15g ; |g_int| = %.15g ; |g_ci| = %.15g ; |g_x| = %.15g',
             it, H_op.e_tot, norm_gorb, norm_gci, norm_gx)
+        floating_level_shift = get_level_shift (las.trust_radius, prec_op, g_vec)
+        if floating_level_shift > 0:
+            log.debug ('Applying a floating level shift of %e', floating_level_shift)
+        prec_op.Hdiag += floating_level_shift
+        H_op.level_shift += floating_level_shift       
         #log.info (
         #    ('LASSCF micro init : E = %.15g ; |g_orb| = %.15g ; |g_ci| = %.15g ; |x0_orb| = %.15g '
         #    '; |x0_ci| = %.15g'), H_op.e_tot, norm_gorb, norm_gci, norm_xorb, norm_xci)
@@ -1270,12 +1284,19 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
                        ndeg_unstable, ndeg, g_unst)
         else:
             log.warn ('LASSCF encountered an unmaskable instability; calculation may not converge')
-        def prec_op (x):
+        return self.PrecOp (Hdiag, log)
+
+    class PrecOp (sparse_linalg.LinearOperator):
+        def __init__(self, Hdiag, log):
+            self.Hdiag = Hdiag
+            self.log = log
+            self.shape = (len (Hdiag), len (Hdiag))
+            self.dtype = Hdiag.dtype
+        def _matvec (self, x):
             t0 = (lib.logger.process_clock(), lib.logger.perf_counter())
-            Mx = x/Hdiag
-            log.timer ('LASSCF sync preconditioner call', *t0)
+            Mx = x/self.Hdiag
+            self.log.timer ('LASSCF sync preconditioner call', *t0)
             return Mx
-        return sparse_linalg.LinearOperator (self.shape,matvec=prec_op,dtype=self.dtype)
 
     def _get_Horb_diag_presymm_fock (self):
         ncore, nocc = self.ncore, self.nocc
