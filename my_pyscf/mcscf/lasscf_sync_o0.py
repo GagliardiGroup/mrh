@@ -22,15 +22,14 @@ class MicroIterInstabilityException (Exception):
 
 def get_level_shift (trust_radius, prec_op, g, tol=1e-8):
     x = prec_op (-g)
-    idx = np.abs (x) > tol
-    g, x = g[idx], x[idx]
-    if np.count_nonzero (np.abs (x) > trust_radius) == 0:
-        return 0
-    x0 = trust_radius * np.ones_like (x)
-    x0[g>0] = -trust_radius
-    shift = (g/x) - (g/x0)
-    assert (shift.all ()>=0), "{} {} {} {}".format (g, x, x0, shift)
-    return shift.max ()
+    sign = x.dot (g) / np.sqrt (linalg.norm (x) * linalg.norm (g))
+    g = linalg.norm (g)
+    x = linalg.norm (x)
+    if x <= trust_radius: return 0
+    x0 = trust_radius 
+    shift = (g/x) + (g/x0)
+    assert (shift>=0), "{} {} {} {}".format (g, x, x0, shift)
+    return shift
 
 def kernel (las, mo_coeff=None, ci0=None, casdm0_fr=None, conv_tol_grad=1e-4, 
         assert_no_dupes=False, verbose=lib.logger.NOTE):
