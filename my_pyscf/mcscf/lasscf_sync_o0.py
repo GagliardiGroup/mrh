@@ -118,7 +118,6 @@ def kernel (las, mo_coeff=None, ci0=None, casdm0_fr=None, conv_tol_grad=1e-4,
             assert (err < 1e-5), '{}'.format (err)
         gx = H_op.get_gx ()
         prec_op = H_op.get_prec ()
-        prec = prec_op (np.ones_like (g_vec)) # Check for divergences
         norm_gorb = linalg.norm (g_vec[:ugg.nvar_orb]) if ugg.nvar_orb else 0.0
         norm_gci = linalg.norm (g_vec[ugg.nvar_orb:]) if ugg.ncsf_sub.sum () else 0.0
         norm_gx = linalg.norm (gx) if gx.size else 0.0
@@ -577,7 +576,7 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
             separately called.
 
     Attributes:
-        ah_level_shift : float
+        level_shift : float
             Shift added to the diagonal of the Hessian to improve convergence. Default = 1e-8.
         ncas : int
             Total number of active orbitals
@@ -652,7 +651,7 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
             ncas_sub=ncas_sub, nelecas_sub=nelecas_sub)
         if h2eff_sub is None: h2eff_sub = las.get_h2eff (mo_coeff)
         self.las = las
-        self.ah_level_shift = las.ah_level_shift
+        self.level_shift = las.ah_level_shift
         self.ugg = ugg
         self.mo_coeff = mo_coeff
         self.ci = ci = [[c.ravel () for c in cr] for cr in ci] 
@@ -1040,7 +1039,7 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
         t1 = extra_timer ('LASSCF sync Hessian operator 6: (Hx)_CI diag', *t1)
 
         # LEVEL SHIFT!!
-        kappa3, ci3 = self.ugg.unpack (self.ah_level_shift * np.abs (x))
+        kappa3, ci3 = self.ugg.unpack (self.level_shift * np.abs (x))
         kappa2 += kappa3
         ci2 = [[x+y for x,y in zip (xr, yr)] for xr, yr in zip (ci2, ci3)]
         t1 = extra_timer ('LASSCF sync Hessian operator 7: level shift', *t1)
@@ -1247,7 +1246,7 @@ class LASSCF_HessianOperator (sparse_linalg.LinearOperator):
                 Approximately the inverse of the Hessian
         '''
         log = lib.logger.new_logger (self.las, self.las.verbose)
-        Hdiag = self._get_Hdiag () + self.ah_level_shift
+        Hdiag = self._get_Hdiag () + self.level_shift
         Hdiag[np.abs (Hdiag)<1e-8] = 1e-8
         # The quadratic power series is a bad approximation if the magnitude of the gradient in
         # the current keyframe is such that we will tend to predict steps with magnitude greater
