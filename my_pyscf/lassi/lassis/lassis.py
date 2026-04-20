@@ -17,6 +17,7 @@ from mrh.my_pyscf.lassi.spaces import _spin_shuffle, list_spaces
 from mrh.my_pyscf.lassi.spaces import all_single_excitations
 from mrh.my_pyscf.lassi.spaces import orthogonal_excitations, combine_orthogonal_excitations
 from mrh.my_pyscf.lassi.lassi import LASSI
+from mrh.my_pyscf.lassi.lassis import chkfile
 
 # TODO: split prepare_states into three steps
 # 1. Compute the number of unique fragment CI vectors to be computed (including sz-flips but not
@@ -809,6 +810,8 @@ class LASSIS (LASSI):
     as_scanner = as_scanner
     prepare_fbf = prepare_fbf
     prepare_model_states = prepare_model_states
+    dump_chk = chkfile.dump_lsis
+    load_chk = load_chk_ = chkfile.load_lsis_
 
     def get_ref_fbf_rootspaces (self, ifrag):
         '''Identify which rootspaces correspond to the reference wave function for a given
