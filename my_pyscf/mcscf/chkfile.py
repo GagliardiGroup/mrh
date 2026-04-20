@@ -87,7 +87,7 @@ def dump_las (mc, chkfile=None, method_key='las', mo_coeff=None, ci=None,
 
     data = _dump_las_get_data (mc, keys_config, keys_saconstr, keys_results, **kwargs)
     with h5py.File (chkfile, 'a') as fh5:
-        chkdata = _dump_las_get_chkdata (fh5, overwrite_mol, method_key)
+        chkdata = _dump_las_get_chkdata (mc, fh5, overwrite_mol, method_key)
         _dump_las_1_(mc, chkdata, data, mo_coeff)
         _dump_las_ci_(mc, chkdata, ci)
     return mc
@@ -102,7 +102,7 @@ def _dump_las_get_data (mc, keys_config, keys_saconstr, keys_results, **kwargs):
         data[key] = kwargs.get (key, val)
     return data
 
-def _dump_las_get_chkdata (fh5, overwrite_mol, method_key):
+def _dump_las_get_chkdata (mc, fh5, overwrite_mol, method_key):
     if 'mol' not in fh5:
         fh5['mol'] = mc.mol.dumps()
     elif overwrite_mol:
