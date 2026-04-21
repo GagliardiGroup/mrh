@@ -76,6 +76,33 @@ def get_init_guess (sisolver, hdiag, nroots, si1, log=None, penalty=None):
         ))
     return si0
 
+def project_init_guess (sisolver, si0, raw2orth, s2_op, ovlp_op):
+    log = logger.new_logger (sisolver, sisolver.verbose)
+    t0 = (logger.process_clock (), logger.perf_counter ())
+    si0 = np.asarray (si0).reshape (raw2orth.shape[1],-1)
+    x0 = raw2orth (ovlp_op (si0))
+    x_norm = linalg.norm (x0, axis=0)
+    idx0 = x_norm < 1e-3
+    if np.count_nonzero (idx0) == 0: return x0
+    if getattr (raw2orth, 'smult', None) is not None:
+        s = si0[:,idx0]
+        s = lib.einsum ('ij,ij->j', s.conj (), s2_op (s))
+        s = (np.sqrt (1+(4*s)) - 1) / 2
+        s = np.around ((2*s) + 1).astype (int)
+        idx1 = s > 0 # In principle, if the vector differed in other symmetries, s would be 0
+        idx2 = s[idx1]!=raw2orth.smult
+        if idx2.any ():
+            s = s[idx1][idx2]
+            idx = np.where (idx0)[0][idx1][idx2]
+            log.error ('Smult of guess vector(s) {} = {} != {}'.format (
+                idx, s, raw2orth.smult
+            ))
+            raise NotImplementedError ("projection of guess SI vectors between total spins")
+    if np.count_nonzero (idx0) > 0:
+        raise RuntimeError ("Can't project initial guess SI vectors")
+    log.timer ("SI vector initial guess projection", *t0)
+    return x0
+
 class SISolver (lib.StreamObject):
     '''Class for diagonalizing a LASSI model space Hamiltonian matrix
 
@@ -327,21 +354,4 @@ def kernel_incore (sisolver, e0, h1, h2, norb_f, ci_fr, nelec_frs, smult_fr, soc
     s2_blk = ((s2_blk @ c) * c.conj ()).sum (0)
     return True, e, c, s2_blk
 
-def project_init_guess (sisolver, si0, raw2orth, s2_op, ovlp_op):
-    si0 = np.asarray (si0).reshape (raw2orth.shape[1],-1)
-    x0 = raw2orth (ovlp_op (si0))
-    x_norm = linalg.norm (x0, axis=0)
-    idx0 = x_norm < 1e-3
-    if np.count_nonzero (idx0) == 0: return x0
-    if getattr (raw2orth, 'smult', None) is not None:
-        s = si0[:,idx0]
-        s = lib.einsum ('ij,ij->j', s.conj (), s2_op (s))
-        s = (np.sqrt (1+(4*s)) - 1) / 2
-        s = np.around ((2*s) + 1).astype (int)
-        idx1 = s > 0 # In principle, if the vector differed in other symmetries, s would be 0
-        if (s[idx1]!=raw2orth.smult).any ():
-            raise NotImplementedError ("projection of guess SI vectors between total spins")
-    if np.count_nonzero (idx0) > 0:
-        raise RuntimeError ("Can't project initial guess SI vectors")
-    return x0
 
