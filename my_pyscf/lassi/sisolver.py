@@ -85,19 +85,27 @@ def project_init_guess (sisolver, si0, raw2orth, s2_op, ovlp_op):
     idx0 = x_norm < 1e-3
     if np.count_nonzero (idx0) == 0: return x0
     if getattr (raw2orth, 'smult', None) is not None:
-        s = si0[:,idx0]
+        s = si0
         s = lib.einsum ('ij,ij->j', s.conj (), s2_op (s))
         s = (np.sqrt (1+(4*s)) - 1) / 2
         s = np.around ((2*s) + 1).astype (int)
-        idx1 = s > 0 # In principle, if the vector differed in other symmetries, s would be 0
-        idx2 = s[idx1]!=raw2orth.smult
-        if idx2.any ():
-            s = s[idx1][idx2]
-            idx = np.where (idx0)[0][idx1][idx2]
+        idx1 = (idx0
+                & (s > 0) # In principle, if the vector differed in other symmetries, s would be 0
+                & (s != raw2orth.smult)
+                )
+        if idx1.any ():
+            s = s[idx1]
+            idx = np.where (idx1)[0]
             log.error ('Smult of guess vector(s) {} = {} != {}'.format (
                 idx, s, raw2orth.smult
             ))
             raise NotImplementedError ("projection of guess SI vectors between total spins")
+        for other_smult in np.unique (s[idx1]):
+            idx2 = (s==other_smult)
+            shift_op = SmultShifter (raw2orth, other_smult)
+            x0[:,idx2] = shift_op (si0[:,idx2])
+        x_norm = linalg.norm (x0, axis=0)
+        idx0 = x_norm < 1e-3
     if np.count_nonzero (idx0) > 0:
         raise RuntimeError ("Can't project initial guess SI vectors")
     log.timer ("SI vector initial guess projection", *t0)
