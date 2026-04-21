@@ -1,6 +1,6 @@
 from mrh.my_pyscf.mcscf import chkfile as las_chkfile
 
-KEYS_CONFIG_LASSI = las_chkfile.KEYS_CONFIG_LASSCF + ['nfrags', 'break_symmetry', 'soc', 'opt']
+KEYS_CONFIG_LASSI = las_chkfile.KEYS_CONFIG_LASSCF + ['nfrags', 'break_symmetry', 'soc', 'opt', 'mo_coeff']
 KEYS_SACONSTR_LASSI = las_chkfile.KEYS_SACONSTR_LASSCF
 KEYS_RESULTS_LASSI = ['e_states', 'e_roots', 'si', 's2', 'nelec', 'wfnsym', 'rootsym']
 
