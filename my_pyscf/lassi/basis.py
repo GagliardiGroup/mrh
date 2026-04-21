@@ -138,6 +138,8 @@ class RootspaceManifold:
     get_nbytes = get_nbytes
     def __init__(self, norb_f, lroots_fr, nprods_r, n_str, s_str, m_strs, m_blocks, xmat):
         self.norb_f = norb_f
+        self._lroots_fr = lroots_fr
+        self._nprods_r = nprods_r
         self.n_str = n_str
         self.s_str = s_str
         self.m_strs = m_strs
@@ -238,6 +240,19 @@ class SpinCoupledRootspaceManifold (RootspaceManifold):
         for i, t_str in enumerate (self.t_strs):
             out += ' {} {}\n'.format (i, t_str)
         return out[:-1]   
+
+    def change_smult (self, new_smult):
+        return SpinCoupledRootspaceManifold (
+            self.norb_f,
+            self._lroots_fr,
+            self._nprods_r,
+            self.n_str,
+            self.s_str,
+            self.m_strs,
+            self.m_blocks,
+            self.xmat,
+            new_smult
+            )
 
 def _get_spin_split_manifolds (ci_fr, norb_f, nelec_frs, smult_fr, lroots_fr, disc_fr, idx):
     '''The same as _get_spin_split_manifolds_idx, except that all of the arguments need to be
@@ -706,6 +721,18 @@ class SpinCoupledOrthBasis (OrthBasis):
         ketstr = ketstr.T[spec].T[ket_t]
         return np.all (brastr==ketstr, axis=-1)
 
+    def change_smult (self, new_smult):
+        new_manifolds = [manifold.change_smult (new_smult)
+                         for manifold in self.manifolds]
+        new_north = sum ([np.prod (manifold.orth_shape)
+                          for manifold in new_manifolds])
+        return SpinCoupledOrthBasis ((new_north, self.shape[1]),
+                                     self.dtype,
+                                     self.nprods_raw,
+                                     new_manifolds,
+                                     new_smult)
+
+
 def get_spincoup_bases (smults_f, spin_lsf=None, smult_lsf=None):
     from mrh.my_pyscf.lassi.spaces import SingleLASRootspace
     norb_f = np.zeros_like (smults_f)
@@ -778,4 +805,59 @@ def get_spincoup_umat (smults_f, spin_lsf, smult_lsf):
                 assert ((m0 + mi) == m1)
                 umat[j,k] *= float (CG (s0,m0,si,mi,s1,m1).doit ())
     return umat
+
+class SmultShifterManifold:
+    def __init__(self, fman, iman, dtype):
+        self.fman = fman
+        self.iman = iman
+        self.dtype = dtype
+        self.shape = (fman.orth_shape[0], iman.orth_shape[0])
+        self.omat = np.zeros (self.shape, dtype=float)
+        t_f = fman.get_t_strs ()
+        for i, t_i in enumerate (iman.get_t_strs ()):
+            dt = linalg.norm (t_f - t_i[None,:], axis=1)
+            f = (dt == np.amin (dt))
+            self.omat[f][i] = 1.0 / np.sqrt (np.count_nonzero (f))
+            assert (len (dt) == len (t_f))
+
+    def __call__(self, arr):
+        ishape = arr.shape
+        irows = ishape[0]
+        frows, err = divmod (irows * self.shape[0], self.shape[1])
+        assert (err == 0)
+        fshape = (frows, arr.shape[1])
+        arr = arr.reshape (self.shape[1], -1)
+        arr = np.dot (self.omat, arr)
+        arr = arr.reshape (fshape)
+        return arr
+
+
+class SmultShifter (sparse_linalg.LinearOperator):
+    def __init__(self, raw2f, smult_i):
+        self.shape = raw2f.shape
+        self.dtype = raw2f.dtye
+        self.raw2f = raw2f
+        self.raw2i = raw2f.change_smult (smult_i)
+        self.manifolds = [SmultShifterManifold (fman, iman, dtype)
+                          for fman, iman in zip (raw2f.manifolds, raw2i.manifolds)]
+
+    def _matvec (self, rawarr):
+        iarr = self.raw2i (rawarr)
+        is_out_complex = (self.dtype==np.complex128) or np.iscomplexobj (iarr)
+        my_dtype = np.complex128 if is_out_complex else np.float64
+        col_shape = iarr.shape[1:]
+        f_shape = [self.shape[0],] + list (col_shape)
+        farr = np.zeros (f_shape, dtype=my_dtype)
+        i0 = f0 = 0
+        for manifold in self.manifolds:
+            i1 = i0 + np.prod (manifold.iman.orth_shape)
+            f1 = f0 + np.prod (manifold.fman.orth_shape)
+            farr[f0:f1] = manifold (iarr[i0:i1])
+            i0 = i1
+            f0 = f1
+        return farr
+ 
+
+
+
 
