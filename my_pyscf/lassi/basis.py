@@ -110,7 +110,7 @@ def get_orth_basis (ci_fr, norb_f, nelec_frs, _get_ovlp=None, smult_fr=None, smu
     if smult_si is None:
         return OrthBasis ((north,nraw), dtype, nprods_r, manifolds)
     else:
-        return SpinCoupledOrthBasis ((north,nraw), dtype, nprods_r, manifolds)
+        return SpinCoupledOrthBasis ((north,nraw), dtype, nprods_r, manifolds, smult_si)
 
 def get_nbytes (obj):
     def _get (x):
@@ -229,6 +229,7 @@ class SpinCoupledRootspaceManifold (RootspaceManifold):
             nb = (self.n_str - m_str) // 2
             self.umat[i,:] *= fermion_spin_shuffle (na, nb)
         self.orth_shape = (self.umat.shape[1], self.orth_shape[1])
+        self.smult = smult_si
 
     def get_t_strs (self): return self.t_strs
 
@@ -633,6 +634,10 @@ class OrthBasis (OrthBasisBase):
 
 
 class SpinCoupledOrthBasis (OrthBasis):
+
+    def __init__(self, shape, dtype, nprods_r, manifolds, smult):
+        OrthBasis.__init__(self, shape, dtype, nprods_r, manifolds)
+        self.smult = smult
 
     def rootspaces_covering_addrs (self, addrs):
         blocks = np.searchsorted (self.offs_orth[:,0], addrs, side='right')-1

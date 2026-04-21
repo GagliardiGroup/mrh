@@ -136,6 +136,7 @@ class SISolver (lib.StreamObject):
 
     kernel = kernel
     get_init_guess = get_init_guess
+    project_init_guess = project_init_guess
 
     def dump_flags (self, verbose=None):
         if verbose is None: verbose = self.verbose
@@ -218,7 +219,7 @@ def kernel_Davidson (sisolver, e0, h1, h2, norb_f, ci_fr, nelec_frs, smult_fr, d
     else:
         precond_op = lib.make_diag_precond (hdiag_orth, level_shift=level_shift)
     if si0 is not None:
-        x0 = raw2orth (ovlp_op (si0))
+        x0 = sisolver.project_init_guess (si0, raw2orth, s2_op, ovlp_op)
     else:
         x0 = None
     x0 = sisolver.get_init_guess (hdiag_orth, nroots, x0, log=log, penalty=hdiag_penalty)
@@ -325,4 +326,22 @@ def kernel_incore (sisolver, e0, h1, h2, norb_f, ci_fr, nelec_frs, smult_fr, soc
     c = raw2orth.H (c)
     s2_blk = ((s2_blk @ c) * c.conj ()).sum (0)
     return True, e, c, s2_blk
+
+def project_init_guess (sisolver, si0, raw2orth, s2_op, ovlp_op):
+    si0 = np.asarray (si0).reshape (raw2orth.shape[1],-1)
+    x0 = raw2orth (ovlp_op (si0))
+    x_norm = linalg.norm (x0, axis=0)
+    idx0 = x_norm < 1e-3
+    if np.count_nonzero (idx0) == 0: return x0
+    if getattr (raw2orth, 'smult', None) is not None:
+        s = si0[:,idx0]
+        s = lib.einsum ('ij,ij->j', s.conj (), s2_op (s))
+        s = (np.sqrt (1+(4*s)) - 1) / 2
+        s = np.around ((2*s) + 1).astype (int)
+        idx1 = s > 0 # In principle, if the vector differed in other symmetries, s would be 0
+        if (s[idx1]!=raw2orth.smult).any ():
+            raise NotImplementedError ("projection of guess SI vectors between total spins")
+    if np.count_nonzero (idx0) > 0:
+        raise RuntimeError ("Can't project initial guess SI vectors")
+    return x0
 
