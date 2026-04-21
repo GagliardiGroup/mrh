@@ -93,16 +93,16 @@ def project_init_guess (sisolver, si0, raw2orth, s2_op, ovlp_op):
                 & (s > 0) # In principle, if the vector differed in other symmetries, s would be 0
                 & (s != raw2orth.smult)
                 )
-        if idx1.any ():
-            s = s[idx1]
-            idx = np.where (idx1)[0]
-            log.error ('Smult of guess vector(s) {} = {} != {}'.format (
-                idx, s, raw2orth.smult
-            ))
-            raise NotImplementedError ("projection of guess SI vectors between total spins")
+        #if idx1.any ():
+        #    s = s[idx1]
+        #    idx = np.where (idx1)[0]
+        #    log.error ('Smult of guess vector(s) {} = {} != {}'.format (
+        #        idx, s, raw2orth.smult
+        #    ))
+        #    raise NotImplementedError ("projection of guess SI vectors between total spins")
         for other_smult in np.unique (s[idx1]):
             idx2 = (s==other_smult)
-            shift_op = SmultShifter (raw2orth, other_smult)
+            shift_op = basis.SmultShifter (raw2orth, other_smult)
             x0[:,idx2] = shift_op (si0[:,idx2])
         x_norm = linalg.norm (x0, axis=0)
         idx0 = x_norm < 1e-3

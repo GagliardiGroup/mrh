@@ -814,11 +814,12 @@ class SmultShifterManifold:
         self.shape = (fman.orth_shape[0], iman.orth_shape[0])
         self.omat = np.zeros (self.shape, dtype=float)
         t_f = fman.get_t_strs ()
-        for i, t_i in enumerate (iman.get_t_strs ()):
-            dt = linalg.norm (t_f - t_i[None,:], axis=1)
-            f = (dt == np.amin (dt))
-            self.omat[f][i] = 1.0 / np.sqrt (np.count_nonzero (f))
-            assert (len (dt) == len (t_f))
+        if fman.orth_shape[0] > 0:
+            for i, t_i in enumerate (iman.get_t_strs ()):
+                dt = np.abs (t_f - t_i[None,:]).sum (1)
+                f = (dt == np.amin (dt))
+                self.omat[:,i][f] = 1.0 / np.sqrt (np.count_nonzero (f))
+                assert (len (dt) == len (t_f))
 
     def __call__(self, arr):
         ishape = arr.shape
@@ -835,11 +836,11 @@ class SmultShifterManifold:
 class SmultShifter (sparse_linalg.LinearOperator):
     def __init__(self, raw2f, smult_i):
         self.shape = raw2f.shape
-        self.dtype = raw2f.dtye
+        self.dtype = raw2f.dtype
         self.raw2f = raw2f
         self.raw2i = raw2f.change_smult (smult_i)
-        self.manifolds = [SmultShifterManifold (fman, iman, dtype)
-                          for fman, iman in zip (raw2f.manifolds, raw2i.manifolds)]
+        self.manifolds = [SmultShifterManifold (fman, iman, self.dtype)
+                          for fman, iman in zip (raw2f.manifolds, self.raw2i.manifolds)]
 
     def _matvec (self, rawarr):
         iarr = self.raw2i (rawarr)
@@ -852,9 +853,12 @@ class SmultShifter (sparse_linalg.LinearOperator):
         for manifold in self.manifolds:
             i1 = i0 + np.prod (manifold.iman.orth_shape)
             f1 = f0 + np.prod (manifold.fman.orth_shape)
-            farr[f0:f1] = manifold (iarr[i0:i1])
-            i0 = i1
-            f0 = f1
+            if (i1-i0)>0 and (f1-f0)>0:
+                farr[f0:f1] = manifold (iarr[i0:i1])
+                i0 = i1
+                f0 = f1
+        f_norm = linalg.norm (farr, axis=0)
+        farr /= f_norm[None,:]
         return farr
  
 
