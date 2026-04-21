@@ -5,7 +5,7 @@ from mrh.my_pyscf.lassi import chkfile as lsi_chkfile
 
 KEYS_CONFIG_LASSIS = lsi_chkfile.KEYS_CONFIG_LASSI
 KEYS_SACONSTR_LASSIS = lsi_chkfile.KEYS_SACONSTR_LASSI
-KEYS_RESULTS_LASSIS = lsi_chkfile.KEYS_RESULTS_LASSI
+KEYS_RESULTS_LASSIS = lsi_chkfile.KEYS_RESULTS_LASSI + ['converged', 'max_disc_sval']
 
 def load_lsis_(lsis, chkfile=None, method_key='lsi',
                keys_config=KEYS_CONFIG_LASSIS,
