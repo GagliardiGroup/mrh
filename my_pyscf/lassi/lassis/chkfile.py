@@ -1,4 +1,5 @@
 import h5py
+from pyscf.lib.chkfile import load
 from mrh.my_pyscf.mcscf import chkfile as las_chkfile
 from mrh.my_pyscf.lassi import chkfile as lsi_chkfile
 
@@ -22,6 +23,7 @@ def load_lsis_(lsis, chkfile=None, method_key='lsi',
                                     keys_saconstr=keys_saconstr,
                                     keys_results=keys_results)
     lsis = _load_lsis_ci_(lsis, data)
+    lsis.prepare_model_states_()
     return lsis
 
 def _load_lsis_ci_(lsis, data):
@@ -49,7 +51,7 @@ def _load_lsis_ci_(lsis, data):
     lsis.ci_charge_hops = ci_ch
     return lsis
 
-def dump_lsis (lsis, chkfile=None, method_key='las', mo_coeff=None,
+def dump_lsis (lsis, chkfile=None, method_key='lsi', mo_coeff=None,
                overwrite_mol=True, keys_config=KEYS_CONFIG_LASSIS,
                keys_saconstr=KEYS_SACONSTR_LASSIS,
                keys_results=KEYS_RESULTS_LASSIS,

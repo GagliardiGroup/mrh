@@ -750,6 +750,16 @@ class LASSIS (LASSI):
         self.ci_spin_flips = ci_sf
         self.ci_charge_hops = ci_ch
 
+        self.prepare_model_states_(ci_ref=ci_ref, ci_sf=ci_sf, ci_ch=ci_ch)
+        log.info ('LASSIS model state summary: %d rootspaces; %d model states; converged? %s',
+                  self.nroots, self.get_lroots ().prod (0).sum (), str (self.converged))
+        log.info ('LASSIS overall max disc sval: %e', self.max_disc_sval)
+        return self.converged
+
+    def prepare_model_states_(self, ci_ref=None, ci_sf=None, ci_ch=None):
+        if ci_ref is None: ci_ref = self.get_ci_ref ()
+        if ci_sf is None: ci_sf = self.ci_spin_flips
+        if ci_ch is None: ci_ch = self.ci_charge_hops
         las, self.entmaps = self.prepare_model_states (ci_ref, ci_sf, ci_ch)
         #self.__dict__.update(las.__dict__) # Unsafe
         self.fciboxes = las.fciboxes
@@ -758,10 +768,7 @@ class LASSIS (LASSI):
         self.weights = las.weights
         self.e_lexc = las.e_lexc
         self.e_states = las.e_states
-        log.info ('LASSIS model state summary: %d rootspaces; %d model states; converged? %s',
-                  self.nroots, self.get_lroots ().prod (0).sum (), str (self.converged))
-        log.info ('LASSIS overall max disc sval: %e', self.max_disc_sval)
-        return self.converged
+        return
 
     def energy_tot (self, mo_coeff=None, ci_ref=None, ci_sf=None, ci_ch=None, si=None, soc=None):
         if ci_ref is None: ci_ref = self.get_ci_ref ()
