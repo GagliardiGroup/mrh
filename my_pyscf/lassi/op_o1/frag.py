@@ -1,6 +1,7 @@
 import numpy as np
 from scipy import linalg
 from pyscf import lib
+from pyscf.lib import chkfile as chk
 from pyscf.fci.direct_spin1 import trans_rdm12s, trans_rdm1s
 from pyscf.fci.direct_spin1 import contract_1e, contract_2e, absorb_h1e
 from pyscf.fci.direct_uhf import contract_1e as contract_1e_uhf
@@ -544,7 +545,54 @@ class FragTDMInt (object):
                     )
 
         t1 = self._make_dms_()
+        ####### TEST CODE #######
+        import tempfile, h5py
+        with tempfile.NamedTemporaryFile() as fchk:
+            self.dump_mats_chk (str (fchk))
+            mats1 = self.load_mats_chk (str (fchk))
+            for key, val0 in self.mats.items ():
+                val1 = mats1[key]
+                iteration = [range (nuroots), range (nuroots),]
+                if key in ('h', 'phh'):
+                    iteration += [range (2),]
+                elif key=='hh':
+                    iteration += [range (3),]
+                for ix in product (*iteration):
+                    v0, v1 = val0, val1
+                    for i in ix[::-1]:
+                        v0, v1 = v0[i], v1[i]
+                    if v0 is None:
+                        assert (v1 is None)
+                    else:
+                        assert (np.amax (np.abs (v0-v1)) < 1e-8)
         return t0
+
+    def dump_mats_chk (self, chkfile):
+        mats1 = {}
+        def iterate_down (item):
+            if isinstance (item, list):
+                return [iterate_down (i) for i in item]
+            elif item is None:
+                return np.empty (0)
+            else:
+                return item
+        for key, val in self.mats.items ():
+            mats1[key] = iterate_down (val)
+        chk.dump (chkfile, 'mats', mats1)
+
+    def load_mats_chk (self, chkfile):
+        mats1 = chk.load (chkfile, 'mats')
+        mats2 = {}
+        def iterate_down (item):
+            if isinstance (item, list):
+                return [iterate_down (i) for i in item]
+            elif item.size == 0:
+                return None
+            else:
+                return item
+        for key, val in mats1.items ():
+            mats2[key] = iterate_down (val)
+        return mats2
 
     def update_ci_(self, iroot, ci):
         for i, civec in zip (iroot, ci):
