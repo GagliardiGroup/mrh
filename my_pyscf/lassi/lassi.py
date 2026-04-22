@@ -771,12 +771,14 @@ class LASSI(lib.StreamObject):
     LASSI Method class
     '''
     def __init__(self, las, mo_coeff=None, ci=None, soc=False, break_symmetry=False, opt=1,
-                 davidson_only=False, nroots_si=None, **kwargs):
+                 davidson_only=False, nroots_si=None, chkfile=None, **kwargs):
         from mrh.my_pyscf.mcscf.lasci import LASCINoSymm
         if isinstance(las, LASCINoSymm): self._las = las
         else: raise RuntimeError("LASSI requires las instance")
         if mo_coeff is None: mo_coeff = las.mo_coeff
         if ci is None: ci = las.ci
+        if chkfile is None: chkfile = las.chkfile
+        self.chkfile = chkfile
         self.mo_coeff, self.ci = mo_coeff, ci
         # indiscriminate "dict update" from las is bad practice. not doing that anymore
         # Wave function configuration data from las parent
@@ -802,7 +804,7 @@ class LASSI(lib.StreamObject):
         self.soc = soc
         self.opt = opt
         self.sisolver = SISolver (self, soc=soc, opt=opt, davidson_only=davidson_only,
-                                  max_memory=self.max_memory)
+                                  max_memory=self.max_memory, chkfile=chkfile)
         if nroots_si is not None:
             self.sisolver.nroots = nroots_si
         self._keys = set((self.__dict__.keys())).union(keys)

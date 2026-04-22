@@ -151,10 +151,12 @@ class SISolver (lib.StreamObject):
     '''
 
     def __init__(self, las, soc=0, opt=1, davidson_only=False, nroots=NROOTS,
-                 max_memory=param.MAX_MEMORY):
+                 chkfile=None, max_memory=param.MAX_MEMORY):
+        if chkfile is None: chkfile = getattr (las, 'chkfile', None)
         self.las = las # I need this because op_o? fns need this
         self.verbose = las.verbose
         self.stdout = las.stdout
+        self.chkfile = chkfile
         self.max_memory = max_memory
         self.davidson_only = davidson_only
         self.max_cycle = MAX_CYCLE
@@ -211,7 +213,7 @@ def kernel_Davidson (sisolver, e0, h1, h2, norb_f, ci_fr, nelec_frs, smult_fr, d
     smult = getattr (sisolver, 'smult', None)
     h_op_raw, s2_op, ovlp_op, hdiag_raw, _get_ovlp = op[opt].gen_contract_op_si_hdiag (
         sisolver.las, h1, h2, ci_fr, nelec_frs, smult_fr=smult_fr, soc=soc, disc_fr=disc_fr,
-        screen_thresh=screen_thresh
+        screen_thresh=screen_thresh, chkfile=chkfile, chkkey='lsi'
     )
     if verbose >= logger.DEBUG:
         # The sort is slow

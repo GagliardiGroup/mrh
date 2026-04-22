@@ -129,7 +129,7 @@ class FragTDMInt (object):
                  rootaddr, fragaddr, idx_frag, mask_ints, smult_r=None,
                  dtype=np.float64, discriminator=None,
                  pt_order=None, do_pt_order=None, screen_linequiv=DO_SCREEN_LINEQUIV,
-                 verbose=None):
+                 chkfile=None, chkkey=None, verbose=None):
         # TODO: if it actually helps, cache the "linkstr" arrays
         if verbose is None: verbose = las.verbose
         if smult_r is None: smult_r = [None for n in nelec_rs]
@@ -151,7 +151,8 @@ class FragTDMInt (object):
         self.idx_frag = idx_frag
         self.mask_ints = mask_ints
         self.discriminator = discriminator
-
+        self.chkfile = chkfile
+        self.chkkey = chkkey
 
         if pt_order is None: pt_order = np.zeros (nroots, dtype=int)
         self.pt_order = pt_order
@@ -544,30 +545,17 @@ class FragTDMInt (object):
                         self.mask_ints[:,i], self.mask_ints[:,j]
                     )
 
-        t1 = self._make_dms_()
-        ####### TEST CODE #######
-        import tempfile, h5py
-        with tempfile.NamedTemporaryFile() as fchk:
-            self.dump_mats_chk (str (fchk))
-            mats1 = self.load_mats_chk (str (fchk))
-            for key, val0 in self.mats.items ():
-                val1 = mats1[key]
-                iteration = [range (nuroots), range (nuroots),]
-                if key in ('h', 'phh'):
-                    iteration += [range (2),]
-                elif key=='hh':
-                    iteration += [range (3),]
-                for ix in product (*iteration):
-                    v0, v1 = val0, val1
-                    for i in ix[::-1]:
-                        v0, v1 = v0[i], v1[i]
-                    if v0 is None:
-                        assert (v1 is None)
-                    else:
-                        assert (np.amax (np.abs (v0-v1)) < 1e-8)
+        if self.load_mats_chk_():
+            t1 = self._make_dms_()
+        self.dump_mats_chk ()
         return t0
 
-    def dump_mats_chk (self, chkfile):
+    def has_chk (self):
+        return ((self.chkfile is not None)
+                and (self.chkkey is not None))
+
+    def dump_mats_chk (self):
+        if not self.has_chk (): return
         mats1 = {}
         def iterate_down (item):
             if isinstance (item, list):
@@ -578,11 +566,12 @@ class FragTDMInt (object):
                 return item
         for key, val in self.mats.items ():
             mats1[key] = iterate_down (val)
-        chk.dump (chkfile, 'mats', mats1)
+        chk.dump (self.chkfile, self.chkkey + '/mats', mats1)
 
-    def load_mats_chk (self, chkfile):
-        mats1 = chk.load (chkfile, 'mats')
-        mats2 = {}
+    def load_mats_chk_(self):
+        if not self.has_chk ():
+            return 1
+        mats1 = chk.load (self.chkfile, self.chkkey + '/mats')
         def iterate_down (item):
             if isinstance (item, list):
                 return [iterate_down (i) for i in item]
@@ -591,8 +580,8 @@ class FragTDMInt (object):
             else:
                 return item
         for key, val in mats1.items ():
-            mats2[key] = iterate_down (val)
-        return mats2
+            self.mats[key] = iterate_down (val)
+        return 0
 
     def update_ci_(self, iroot, ci):
         for i, civec in zip (iroot, ci):
@@ -1334,7 +1323,7 @@ class HamTerm:
 
 def make_ints (las, ci, nelec_frs, smult_fr=None, screen_linequiv=DO_SCREEN_LINEQUIV, nlas=None,
                _FragTDMInt_class=FragTDMInt, mask_ints=None, discriminator=None, disc_fr=None,
-               pt_order=None, do_pt_order=None, verbose=None):
+               pt_order=None, do_pt_order=None, chkfile=None, chkkey=None, verbose=None):
     ''' Build fragment-local intermediates (`FragTDMInt`) for LASSI o1
 
     Args:
@@ -1383,6 +1372,7 @@ def make_ints (las, ci, nelec_frs, smult_fr=None, screen_linequiv=DO_SCREEN_LINE
     ints = []
 
     for ifrag in range (nfrags):
+        chkkey1 = '{}/frag{}'.format (chkkey, ifrag) if chkkey is not None else None
         m0 = lib.current_memory ()[0]
         tdmint = _FragTDMInt_class (las, ci[ifrag],
                                     nlas[ifrag], nroots, nelec_frs[ifrag], rootaddr,
@@ -1391,6 +1381,7 @@ def make_ints (las, ci, nelec_frs, smult_fr=None, screen_linequiv=DO_SCREEN_LINE
                                     discriminator=list(zip(discriminator,disc_fr[ifrag])),
                                     screen_linequiv=screen_linequiv,
                                     pt_order=pt_order, do_pt_order=do_pt_order,
+                                    chkfile=chkfile, chkkey=chkkey1,
                                     verbose=verbose)
         m1 = lib.current_memory ()[0]
         log.debug ('LAS-state TDM12s fragment %d uses %f MB of %f MB total used',

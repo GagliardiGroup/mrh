@@ -1442,6 +1442,10 @@ def gen_contract_op_si_hdiag (las, h1, h2, ci, nelec_frs, smult_fr=None, disc_fr
     pt_order = kwargs.get ('pt_order', None)
     do_pt_order = kwargs.get ('do_pt_order', None)
     max_memory = getattr (las, 'max_memory', las.mol.max_memory)
+    chkfile = kwargs.get ('chkfile', None)
+    chkkey = kwargs.get ('chkkey', None)
+    if chkkey is not None:
+        chkkey = chkkey + '/hsi'
     dtype = h1.dtype
     nfrags, nroots = nelec_frs.shape[:2]
     if soc>1: raise NotImplementedError ("Spin-orbit coupling of second order")
@@ -1454,7 +1458,7 @@ def gen_contract_op_si_hdiag (las, h1, h2, ci, nelec_frs, smult_fr=None, disc_fr
     t1 = (lib.logger.process_clock (), lib.logger.perf_counter ())
     ints, lroots = frag.make_ints (las, ci, nelec_frs, nlas=nlas, smult_fr=smult_fr,
                                    disc_fr=disc_fr, pt_order=pt_order, do_pt_order=do_pt_order,
-                                   verbose=verbose)
+                                   chkfile=chkfile, chkkey=chkkey, verbose=verbose)
     t1 = log.timer ('LASSI hsi operator first pass make ints', *t1)
     nstates = np.sum (np.prod (lroots, axis=0))
 
