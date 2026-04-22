@@ -1020,7 +1020,6 @@ class LASSI(lib.StreamObject):
         log.warn (("LASSI nroots_si is deprecated. Set "
                    "sisolver.nroots in the future"))
         self.sisolver.nroots = x
-        print ("right after setting", self.nroots_si)
 
     @property
     def davidson_only (self): return self.sisolver.davidson_only

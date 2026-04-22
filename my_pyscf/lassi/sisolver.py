@@ -211,6 +211,7 @@ def kernel_Davidson (sisolver, e0, h1, h2, norb_f, ci_fr, nelec_frs, smult_fr, d
     screen_thresh = getattr (sisolver, 'davidson_screen_thresh', DAVIDSON_SCREEN_THRESH)
     pspace_size = getattr (sisolver, 'pspace_size', PSPACE_SIZE)
     smult = getattr (sisolver, 'smult', None)
+    chkfile = getattr (sisolver, 'chkfile', None)
     h_op_raw, s2_op, ovlp_op, hdiag_raw, _get_ovlp = op[opt].gen_contract_op_si_hdiag (
         sisolver.las, h1, h2, ci_fr, nelec_frs, smult_fr=smult_fr, soc=soc, disc_fr=disc_fr,
         screen_thresh=screen_thresh, chkfile=chkfile, chkkey='lsi'

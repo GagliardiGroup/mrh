@@ -236,7 +236,7 @@ class FragTDMInt (object):
         except Exception as e:
             errstr = 'frag {} failure to get element {},{}'.format (self.idx_frag, ir, jr)
             errstr = errstr + '\nhopping_index entry: {}'.format (self.hopping_index[:,ir,jr])
-            raise RuntimeError (errstr)
+            raise RuntimeError (errstr) from e
 
     def try_get_tdm (self, tag, s, i, j, uroot_idx=False, highm=False):
         tab = self.mats[tag]
@@ -572,6 +572,8 @@ class FragTDMInt (object):
         if not self.has_chk ():
             return 1
         mats1 = chk.load (self.chkfile, self.chkkey + '/mats')
+        if mats1 is None:
+            return 1
         def iterate_down (item):
             if isinstance (item, list):
                 return [iterate_down (i) for i in item]
