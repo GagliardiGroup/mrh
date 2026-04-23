@@ -1,7 +1,6 @@
 import numpy as np
 from scipy import linalg
 from pyscf import lib
-from pyscf.lib import chkfile as chk
 from pyscf.fci.direct_spin1 import trans_rdm12s, trans_rdm1s
 from pyscf.fci.direct_spin1 import contract_1e, contract_2e, absorb_h1e
 from pyscf.fci.direct_uhf import contract_1e as contract_1e_uhf
@@ -11,6 +10,7 @@ from itertools import product, combinations, combinations_with_replacement
 from mrh.my_pyscf.lassi.citools import get_lroots, get_rootaddr_fragaddr, get_unique_roots
 from mrh.my_pyscf.lassi.citools import _get_unique_roots_with_spin
 from mrh.my_pyscf.lassi.op_o1.utilities import *
+from mrh.my_pyscf.lassi.op_o1 import chkfile as chk
 from mrh.my_pyscf.fci.rdm import trans_rdm1ha_des, trans_rdm1hb_des #make_rdm1_spin1
 from mrh.my_pyscf.fci.rdm import trans_rdm13ha_des, trans_rdm13hb_des #is make_rdm12_spin1
 from mrh.my_pyscf.fci.rdm import trans_sfddm1, trans_hhdm ##trans_sfddm1 is make_rdm12_spin1, trans_hhdm is make_rdm12_spin1
@@ -594,29 +594,19 @@ class FragTDMInt (object):
     def load_idx_chk_(self):
         if not self.has_chk ():
             return 1
+        loaded = {}
         for field in self.chkfields:
             key = '{}/{}'.format (self.chkkey, field)
             value = chk.load (self.chkfile, key)
             if value is None:
                 return 1
-            elif value.size == 0:
-                value = None
-            setattr (self, field, value)
+            loaded[field] = value
+        self.__dict__.update (**loaded)
         return 0
 
     def dump_mats_chk (self):
         if not self.has_chk (): return
-        mats1 = {}
-        def iterate_down (item):
-            if isinstance (item, list):
-                return [iterate_down (i) for i in item]
-            elif item is None:
-                return np.empty (0)
-            else:
-                return item
-        for key, val in self.mats.items ():
-            mats1[key] = iterate_down (val)
-        chk.dump (self.chkfile, self.chkkey + '/mats', mats1)
+        chk.dump (self.chkfile, self.chkkey + '/mats', self.mats)
 
     def load_mats_chk_(self):
         if not self.has_chk ():
@@ -624,15 +614,8 @@ class FragTDMInt (object):
         mats1 = chk.load (self.chkfile, self.chkkey + '/mats')
         if mats1 is None:
             return 1
-        def iterate_down (item):
-            if isinstance (item, list):
-                return [iterate_down (i) for i in item]
-            elif item.size == 0:
-                return None
-            else:
-                return item
         for key, val in mats1.items ():
-            self.mats[key] = iterate_down (val)
+            self.mats[key] = (val)
         return 0
 
     def update_ci_(self, iroot, ci):
@@ -945,7 +928,7 @@ class FragTDMInt (object):
                     self.set_hh (bra, ket, 2, trans_hhdm_loop (bra, ket, spin=2))
                     t1 = self.log.timer_debug1 ('_make_dms_ trans_hhdm_loop ', *t1)
         
-        return
+        return t0
 
     def symmetrize_pt1_(self, ptmap):
         ''' Symmetrize transition density matrices of first order in perturbation theory '''

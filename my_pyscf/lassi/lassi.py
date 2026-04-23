@@ -770,6 +770,7 @@ class LASSI(lib.StreamObject):
     '''
     LASSI Method class
     '''
+    _method_key = 'lsi'
     def __init__(self, las, mo_coeff=None, ci=None, soc=False, break_symmetry=False, opt=1,
                  davidson_only=False, nroots_si=None, chkfile=None, **kwargs):
         from mrh.my_pyscf.mcscf.lasci import LASCINoSymm
