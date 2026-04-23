@@ -459,26 +459,10 @@ class FragTDMInt (object):
                 timestamp of entry into this function, for profiling by caller
         '''
         t0 = (lib.logger.process_clock (), lib.logger.perf_counter ())
-        if self.load_idx_chk_():
-            self._init_idx_(screen_linequiv)
-        self.dump_idx_chk ()
+        if chk.has_chk (self.chkfile, with_record=self.chkkey):
+            self.load_chk_()
+            return t0
 
-        nuroots = self.nuroots
-        self.mats = {}
-        self.mats['ovlp'] = [[None for i in range (nuroots)] for j in range (nuroots)]
-        self.mats['h'] = [[[None for i in range (nuroots)] for j in range (nuroots)] for s in (0,1)]
-        self.mats['hh'] = [[[None for i in range (nuroots)] for j in range (nuroots)] for s in (-1,0,1)] 
-        self.mats['phh'] = [[[None for i in range (nuroots)] for j in range (nuroots)] for s in (0,1)]
-        self.mats['sm'] = [[None for i in range (nuroots)] for j in range (nuroots)]
-        self.mats['dm1'] = [[None for i in range (nuroots)] for j in range (nuroots)]
-        self.mats['dm2'] = [[None for i in range (nuroots)] for j in range (nuroots)]
-
-        if self.load_mats_chk_():
-            t1 = self._make_dms_()
-        self.dump_mats_chk ()
-        return t0
-
-    def _init_idx_(self, screen_linequiv):
         ci = self.ci
         ndeta, ndetb = self.ndeta_r, self.ndetb_r
         if self.mask_ints is not None:
@@ -556,7 +540,22 @@ class FragTDMInt (object):
                         self.mask_ints[:,i], self.mask_ints[:,j]
                     )
 
-        return
+        nuroots = self.nuroots
+        self.mats = {}
+        self.mats['ovlp'] = [[None for i in range (nuroots)] for j in range (nuroots)]
+        self.mats['h'] = [[[None for i in range (nuroots)] for j in range (nuroots)] for s in (0,1)]
+        self.mats['hh'] = [[[None for i in range (nuroots)] for j in range (nuroots)] for s in (-1,0,1)] 
+        self.mats['phh'] = [[[None for i in range (nuroots)] for j in range (nuroots)] for s in (0,1)]
+        self.mats['sm'] = [[None for i in range (nuroots)] for j in range (nuroots)]
+        self.mats['dm1'] = [[None for i in range (nuroots)] for j in range (nuroots)]
+        self.mats['dm2'] = [[None for i in range (nuroots)] for j in range (nuroots)]
+
+        t1 = self._make_dms_()
+
+        if chk.has_chk (self.chkfile):
+            self.dump_chk ()
+
+        return t0
 
     chkfields = ['mask_ints',
                  'root_unique',
@@ -573,14 +572,10 @@ class FragTDMInt (object):
                  'hopidx_null',
                  'hopidx_1c',
                  'hopidx_1s',
-                 'hopidx_2c']
+                 'hopidx_2c',
+                 'mats']
 
-    def has_chk (self):
-        return ((self.chkfile is not None)
-                and (self.chkkey is not None))
-
-    def dump_idx_chk (self):
-        if not self.has_chk (): return
+    def dump_chk (self):
         for field in self.chkfields:
             key = '{}/{}'.format (self.chkkey, field)
             value = getattr (self, field)
@@ -591,9 +586,7 @@ class FragTDMInt (object):
                 print (key, value)
                 raise e from None
 
-    def load_idx_chk_(self):
-        if not self.has_chk ():
-            return 1
+    def load_chk_(self):
         loaded = {}
         for field in self.chkfields:
             key = '{}/{}'.format (self.chkkey, field)
@@ -602,21 +595,7 @@ class FragTDMInt (object):
                 return 1
             loaded[field] = value
         self.__dict__.update (**loaded)
-        return 0
-
-    def dump_mats_chk (self):
-        if not self.has_chk (): return
-        chk.dump (self.chkfile, self.chkkey + '/mats', self.mats)
-
-    def load_mats_chk_(self):
-        if not self.has_chk ():
-            return 1
-        mats1 = chk.load (self.chkfile, self.chkkey + '/mats')
-        if mats1 is None:
-            return 1
-        for key, val in mats1.items ():
-            self.mats[key] = (val)
-        return 0
+        return 
 
     def update_ci_(self, iroot, ci):
         for i, civec in zip (iroot, ci):
@@ -624,7 +603,6 @@ class FragTDMInt (object):
             self.ci[i] = civec.reshape (-1, self.ndeta_r[i], self.ndetb_r[i])
         t0 = self._make_dms_(screen=iroot)
         self.log.timer ('Update density matrices of fragment intermediate', *t0)
-    
 
     def _trans_rdm12s_loop(self, bravecs, ketvecs, norb, nelec, linkstr):
         tdm1s = np.zeros ((bravecs.shape[0],ketvecs.shape[0],2,norb,norb), dtype=self.dtype)
