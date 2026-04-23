@@ -110,6 +110,7 @@ class LASSIrq (LASSI):
 
 
 class LASSIrqCT (LASSIrq):
+    _method_key = 'lsirqct'
     def make_lroots (self, las, q=None):
         lroots = LASSIrq.make_lroots (self, las, q=q)
         charges_fr = get_space_info (las)[0].T
