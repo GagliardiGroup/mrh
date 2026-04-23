@@ -1,6 +1,7 @@
 import sys
 import numpy as np
 import time
+import hashlib
 from scipy import linalg
 from mrh.my_pyscf.lassi import op_o0
 from mrh.my_pyscf.lassi import op_o1
