@@ -169,7 +169,10 @@ class SISolver (lib.StreamObject):
         self.nroots = nroots
         self.smult = None
         self.converged = False
-        self.method_key = getattr (las, '_method_key', 'lsi') + '/si'
+        if callable (getattr (las, 'get_o1_chk_key', None)):
+            self.method_key = las.get_o1_chk_key ()
+        else:
+            self.method_key = 'lsi/o1'
         self._keys = set((self.__dict__.keys()))
 
     kernel = kernel

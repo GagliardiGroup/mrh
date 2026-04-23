@@ -549,7 +549,10 @@ def roots_trans_rdm12s (las, ci, si_bra, si_ket, orbsym=None, soc=None, break_sy
     o0_memcheck = op_o0.memcheck (las, ci, soc=soc)
     if opt == 0 and o0_memcheck == False:
         raise RuntimeError ('Insufficient memory to use o0 LASSI algorithm')
-    chkkey = getattr (las, '_method_key', 'lsi') + '/si'
+    if callable (getattr (las, 'get_o1_chk_key', None)):
+        chkkey = las.get_o1_chk_key ()
+    else:
+        chkkey = 'lsi/o1'
 
     # Initialize matrices
     norb = las.ncas
@@ -771,7 +774,6 @@ class LASSI(lib.StreamObject):
     '''
     LASSI Method class
     '''
-    _method_key = 'lsi'
     def __init__(self, las, mo_coeff=None, ci=None, soc=False, break_symmetry=False, opt=1,
                  davidson_only=False, nroots_si=None, chkfile=None, **kwargs):
         from mrh.my_pyscf.mcscf.lasci import LASCINoSymm
@@ -810,6 +812,21 @@ class LASSI(lib.StreamObject):
         if nroots_si is not None:
             self.sisolver.nroots = nroots_si
         self._keys = set((self.__dict__.keys())).union(keys)
+
+    _method_key = 'lsi'
+
+    def get_o1_chk_hash (self):
+        m = hashlib.sha256 ()
+        m.update (np.asarray ([self.ncore,] + self.ncas_sub).astype (int).tobytes ())
+        m.update (self.get_nelec_frs ().tobytes ())
+        m.update (self.get_smult_fr ().tobytes ())
+        m.update (self.get_sym_fr ().tobytes ())
+        m.update (self.get_lroots ().tobytes ())
+        return m
+    
+    def get_o1_chk_key (self):
+        fp = self.get_o1_chk_hash ().hexdigest ()
+        return '{}/o1/{}'.format (self._method_key, fp)
 
     @property
     def converged_si (self):
