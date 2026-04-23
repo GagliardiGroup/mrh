@@ -169,7 +169,7 @@ class SISolver (lib.StreamObject):
         self.nroots = nroots
         self.smult = None
         self.converged = False
-        self.method_key = getattr (las, '_method_key', 'lsi')
+        self.method_key = getattr (las, '_method_key', 'lsi') + '/si'
         self._keys = set((self.__dict__.keys()))
 
     kernel = kernel
@@ -337,8 +337,10 @@ def kernel_incore (sisolver, e0, h1, h2, norb_f, ci_fr, nelec_frs, smult_fr, soc
     # TODO: simplify
     t0 = (logger.process_clock (), logger.perf_counter ())
      
+    chkfile = getattr (sisolver, 'chkfile', None)
     ham_blk, s2_blk, ovlp_blk, _get_ovlp = op[opt].ham (
-        sisolver.las, h1, h2, ci_fr, nelec_frs, smult_fr=smult_fr, soc=soc)
+        sisolver.las, h1, h2, ci_fr, nelec_frs, smult_fr=smult_fr, soc=soc,
+        chkfile=chkfile, chkkey=sisolver.method_key)
     t0 = logger.timer (sisolver, 'LASSI H build', *t0)
 
     # Error catch: linear dependencies in basis

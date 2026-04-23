@@ -69,7 +69,7 @@ def contract_ham_ci (las, h1, h2, ci_fr, nelec_frs, si_bra=None, si_ket=None, ci
                      nelec_frs_bra=None, smult_fr=None, smult_fr_bra=None, disc_fr=None,
                      disc_fr_bra=None, h0=0, soc=0, sum_bra=False, orbsym=None, wfnsym=None,
                      pt_order=None, do_pt_order=None, accum=None, add_transpose=False,
-                     verbose=None):
+                     chkfile=None, chkkey=None, verbose=None):
     '''Evaluate the action of the state interaction Hamiltonian on a set of ket CI vectors,
     projected onto a basis of bra CI vectors, leaving one fragment of the bra uncontracted.
 
@@ -170,13 +170,18 @@ def contract_ham_ci (las, h1, h2, ci_fr, nelec_frs, si_bra=None, si_ket=None, ci
 
     # First pass: single-fragment intermediates
     t00 = (lib.logger.process_clock (), lib.logger.perf_counter ())
+    if chkkey is not None:
+        chkkey = chkkey + '/hsi'
     ints, lroots = frag.make_ints (las, ci, nelec_frs, nlas=nlas, smult_fr=smult_fr,
                                    screen_linequiv=False,
                                    mask_ints=mask_ints,
                                    discriminator=discriminator,
                                    disc_fr=disc_fr,
                                    pt_order=pt_order,
-                                   do_pt_order=do_pt_order, verbose=verbose)
+                                   do_pt_order=do_pt_order,
+                                   chkfile=chkfile,
+                                   chkkey=chkkey,
+                                   verbose=verbose)
 
     si_bra = map_sivec_to_larger_space (si_bra, lroots, mask_bra_space)
     si_ket = map_sivec_to_larger_space (si_ket, lroots, mask_ket_space)

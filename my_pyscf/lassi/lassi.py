@@ -549,6 +549,7 @@ def roots_trans_rdm12s (las, ci, si_bra, si_ket, orbsym=None, soc=None, break_sy
     o0_memcheck = op_o0.memcheck (las, ci, soc=soc)
     if opt == 0 and o0_memcheck == False:
         raise RuntimeError ('Insufficient memory to use o0 LASSI algorithm')
+    chkkey = getattr (las, '_method_key', 'lsi') + '/si'
 
     # Initialize matrices
     norb = las.ncas
@@ -611,7 +612,7 @@ def roots_trans_rdm12s (las, ci, si_bra, si_ket, orbsym=None, soc=None, break_sy
                 smult_fr = smult_blk
             d1s, d2s = op[opt].roots_trans_rdm12s (las1, ci_blk, nelec_blk, sib_blk, sik_blk,
                                                    smult_fr=smult_fr, orbsym=orbsym, wfnsym=wfnsym,
-                                                   **kwargs)
+                                                   chkfile=las.chkfile, chkkey=chkkey, **kwargs)
             t0 = lib.logger.timer (las, 'LASSI trans_rdm12s rootsym {}'.format (sym), *t0)
         idx_int = np.where (idx_si)[0]
         for (i,a) in enumerate (idx_int):
