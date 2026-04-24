@@ -748,6 +748,7 @@ class LASSIS (LASSI):
         if deactivate_vrv is None: deactivate_vrv = self.deactivate_vrv
         if crash_locmin is None: crash_locmin = self.crash_locmin
         log = logger.new_logger (self, self.verbose)
+        self._reset_o1_chk ()
 
         ci_ref = self.get_ci_ref ()
         ci_sf = self.ci_spin_flips

@@ -1025,12 +1025,15 @@ class LASSI(lib.StreamObject):
         from mrh.my_pyscf.lassi.sitools import analyze
         return analyze (self, self.si, state=state, **kwargs)
 
+    def _reset_o1_chk (self):
+        return chkfile.clear
     def reset (self, mol=None):
         if mol is not None:
             self.mol = mol
         self._las.reset (mol)
-        chkfile.clear_o1 (self)
+        self._reset_o1_chk ()
 
+    _reset_o1_chk = chkfile.clear_o1
     dump_chk = chkfile.dump_lsi
     load_chk = load_chk_ = chkfile.load_lsi_
 

@@ -88,6 +88,7 @@ class LASSIrq (LASSI):
 
     def prepare_states_(self):
         self.converged, las = self.prepare_states ()
+        self._reset_o1_chk ()
         #self.__dict__.update(las.__dict__) # Unsafe
         self.fciboxes = las.fciboxes
         self.ci = las.ci
