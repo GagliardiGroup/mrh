@@ -799,7 +799,7 @@ class LASSIS (LASSI):
             sfattr = {k: v for k, v in self.cisolver_attr_spin_flips.items ()}
             sfattr['max_cycle'] = 0
             with lib.temporary_env (self, cisolver_attr_charge_hops=chattr,
-                                    cisolver_attr_spin_flips=sfatter):
+                                    cisolver_attr_spin_flips=sfattr):
                 self.prepare_states_()
             ci = self.ci
         assert (ci is not None)
