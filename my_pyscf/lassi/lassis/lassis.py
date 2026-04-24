@@ -617,6 +617,7 @@ class LASSIS (LASSI):
         self.deactivate_vrv = deactivate_vrv
         self.crash_locmin = crash_locmin
         self.e_states_meaningless = True # a tag to silence an invalid warning
+        self.mask_charge_hops = None
         LASSI.__init__(self, las, opt=opt, **kwargs)
         self._max_cycle_macro = None
         self._conv_tol_self = None
@@ -627,11 +628,18 @@ class LASSIS (LASSI):
                                for i in range (self.nfrags)]
         self.cisolver_attr_charge_hops = {}
         self._cached_ham_2q = None
-        self.mask_charge_hops = None
         self.ci = None
         if las.nroots>1:
             logger.warn (self, ("Only the first LASSCF state is used by LASSIS! "
                                 "Other states are discarded!"))
+
+    def get_o1_chk_hash (self):
+        m = LASSI.get_o1_chk_hash (self)
+        m.update (bytes (str (self.ncharge), encoding='utf8'))
+        m.update (bytes (str (self.nspin), encoding='utf8'))
+        if self.mask_charge_hops is not None:
+            m.update (self.mask_charge_hops.tobytes ())
+        return m
 
     @property
     def conv_tol_self (self):

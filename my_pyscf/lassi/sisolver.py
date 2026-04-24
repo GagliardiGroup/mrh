@@ -170,9 +170,9 @@ class SISolver (lib.StreamObject):
         self.smult = None
         self.converged = False
         if callable (getattr (las, 'get_o1_chk_key', None)):
-            self.method_key = las.get_o1_chk_key ()
+            self.get_method_key = las.get_o1_chk_key
         else:
-            self.method_key = 'lsi/o1'
+            self.get_method_key = lambda *args: 'lsi/o1'
         self._keys = set((self.__dict__.keys()))
 
     kernel = kernel
@@ -218,7 +218,7 @@ def kernel_Davidson (sisolver, e0, h1, h2, norb_f, ci_fr, nelec_frs, smult_fr, d
     chkfile = getattr (sisolver, 'chkfile', None)
     h_op_raw, s2_op, ovlp_op, hdiag_raw, _get_ovlp = op[opt].gen_contract_op_si_hdiag (
         sisolver.las, h1, h2, ci_fr, nelec_frs, smult_fr=smult_fr, soc=soc, disc_fr=disc_fr,
-        screen_thresh=screen_thresh, chkfile=chkfile, chkkey=sisolver.method_key
+        screen_thresh=screen_thresh, chkfile=chkfile, chkkey=sisolver.get_method_key ()
     )
     if verbose >= logger.DEBUG:
         # The sort is slow
@@ -343,7 +343,7 @@ def kernel_incore (sisolver, e0, h1, h2, norb_f, ci_fr, nelec_frs, smult_fr, soc
     chkfile = getattr (sisolver, 'chkfile', None)
     ham_blk, s2_blk, ovlp_blk, _get_ovlp = op[opt].ham (
         sisolver.las, h1, h2, ci_fr, nelec_frs, smult_fr=smult_fr, soc=soc,
-        chkfile=chkfile, chkkey=sisolver.method_key)
+        chkfile=chkfile, chkkey=sisolver.get_method_key ())
     t0 = logger.timer (sisolver, 'LASSI H build', *t0)
 
     # Error catch: linear dependencies in basis
