@@ -1,3 +1,5 @@
+import h5py
+from pyscf.lib import H5FileWrap
 from mrh.my_pyscf.mcscf import chkfile as las_chkfile
 
 KEYS_CONFIG_LASSI = las_chkfile.KEYS_CONFIG_LASSCF + ['nfrags', 'break_symmetry', 'soc', 'opt', 'mo_coeff']
@@ -23,7 +25,13 @@ def dump_lsi (lsi, chkfile=None, method_key='lsi', mo_coeff=None, ci=None,
                                  ci=ci, overwrite_mol=overwrite_mol, keys_config=keys_config,
                                  keys_saconstr=keys_saconstr, keys_results=keys_results, **kwargs)
 
-                                  
-
+def clear_o1 (lsi, chkfile=None, key=None):
+    if chkfile is None: chkfile = lsi.chkfile
+    if key is None: key = lsi.get_o1_chk_key ()
+    if h5py.is_hdf5(chkfile):
+        with H5FileWrap(chkfile, 'r+') as fh5:
+            if key in fh5:
+                del (fh5[key])
+    return
 
 

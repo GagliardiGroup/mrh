@@ -1029,6 +1029,7 @@ class LASSI(lib.StreamObject):
         if mol is not None:
             self.mol = mol
         self._las.reset (mol)
+        chkfile.clear_o1 (self)
 
     dump_chk = chkfile.dump_lsi
     load_chk = load_chk_ = chkfile.load_lsi_
