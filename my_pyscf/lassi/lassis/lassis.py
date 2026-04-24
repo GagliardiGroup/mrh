@@ -748,7 +748,6 @@ class LASSIS (LASSI):
         if deactivate_vrv is None: deactivate_vrv = self.deactivate_vrv
         if crash_locmin is None: crash_locmin = self.crash_locmin
         log = logger.new_logger (self, self.verbose)
-        self._reset_o1_chk ()
 
         ci_ref = self.get_ci_ref ()
         ci_sf = self.ci_spin_flips
@@ -778,6 +777,7 @@ class LASSIS (LASSI):
         self.weights = las.weights
         self.e_lexc = las.e_lexc
         self.e_states = las.e_states
+        self._reset_o1_chk ()
         return
 
     def energy_tot (self, mo_coeff=None, ci_ref=None, ci_sf=None, ci_ch=None, si=None, soc=None):
