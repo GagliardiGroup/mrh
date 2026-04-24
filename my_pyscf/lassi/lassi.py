@@ -826,8 +826,15 @@ class LASSI(lib.StreamObject):
         return m
     
     def get_o1_chk_key (self):
-        fp = self.get_o1_chk_hash ().hexdigest ()
-        return '{}/o1/{}'.format (self._method_key, fp)
+        if self._do_o1_chk:
+            fp = self.get_o1_chk_hash ().hexdigest ()
+            return '{}/o1/{}'.format (self._method_key, fp)
+        else:
+            return None
+
+    _do_o1_chk=True
+    def _o1_chk_off_env (self):
+        return lib.temporary_env (self, _do_o1_chk=False)
 
     @property
     def converged_si (self):

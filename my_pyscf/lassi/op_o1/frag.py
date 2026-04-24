@@ -459,9 +459,10 @@ class FragTDMInt (object):
                 timestamp of entry into this function, for profiling by caller
         '''
         t0 = (lib.logger.process_clock (), lib.logger.perf_counter ())
-        if chk.has_chk (self.chkfile, with_record=self.chkkey):
-            self.load_chk_()
-            return t0
+        if self.chkkey is not None:
+            if chk.has_chk (self.chkfile, with_record=self.chkkey):
+                self.load_chk_()
+                return t0
 
         ci = self.ci
         ndeta, ndetb = self.ndeta_r, self.ndetb_r
@@ -552,7 +553,7 @@ class FragTDMInt (object):
 
         t1 = self._make_dms_()
 
-        if chk.has_chk (self.chkfile):
+        if (self.chkkey is not None) and chk.has_chk (self.chkfile):
             self.dump_chk ()
 
         return t0
