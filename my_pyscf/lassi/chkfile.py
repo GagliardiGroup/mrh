@@ -27,11 +27,13 @@ def dump_lsi (lsi, chkfile=None, method_key='lsi', mo_coeff=None, ci=None,
 
 def clear_o1 (lsi, chkfile=None, key=None):
     if chkfile is None: chkfile = lsi.chkfile
-    if key is None: key = lsi.get_o1_chk_key ()
-    if h5py.is_hdf5(chkfile):
-        with H5FileWrap(chkfile, 'r+') as fh5:
-            if key in fh5:
-                del (fh5[key])
+    if key is None: key = '{}/o1'.format (lsi._method_key)
+
+    if chkfile is not None:
+        if h5py.is_hdf5(chkfile):
+            with H5FileWrap(chkfile, 'r+') as fh5:
+                if key in fh5:
+                    del (fh5[key])
     return
 
 
