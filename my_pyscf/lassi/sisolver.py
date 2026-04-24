@@ -172,7 +172,7 @@ class SISolver (lib.StreamObject):
         if callable (getattr (las, 'get_o1_chk_key', None)):
             self.get_method_key = las.get_o1_chk_key
         else:
-            self.get_method_key = lambda *args: 'lsi/o1'
+            self.get_method_key = lambda *args: None
         self._keys = set((self.__dict__.keys()))
 
     kernel = kernel

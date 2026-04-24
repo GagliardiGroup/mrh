@@ -553,7 +553,7 @@ def roots_trans_rdm12s (las, ci, si_bra, si_ket, orbsym=None, soc=None, break_sy
     if callable (getattr (las, 'get_o1_chk_key', None)):
         chkkey = las.get_o1_chk_key ()
     else:
-        chkkey = 'lsi/o1'
+        chkkey = None
 
     # Initialize matrices
     norb = las.ncas
