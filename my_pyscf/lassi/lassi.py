@@ -776,7 +776,7 @@ class LASSI(lib.StreamObject):
     LASSI Method class
     '''
     def __init__(self, las, mo_coeff=None, ci=None, soc=False, break_symmetry=False, opt=1,
-                 davidson_only=False, nroots_si=None, chkfile=None, **kwargs):
+                 davidson_only=False, nroots_si=None, chkfile=None, do_o1_chk=None, **kwargs):
         from mrh.my_pyscf.mcscf.lasci import LASCINoSymm
         if isinstance(las, LASCINoSymm): self._las = las
         else: raise RuntimeError("LASSI requires las instance")
@@ -808,6 +808,7 @@ class LASSI(lib.StreamObject):
         self.break_symmetry = break_symmetry
         self.soc = soc
         self.opt = opt
+        if do_o1_chk is not None: self._do_o1_chk = do_o1_chk
         self.sisolver = SISolver (self, soc=soc, opt=opt, davidson_only=davidson_only,
                                   max_memory=self.max_memory, chkfile=chkfile)
         if nroots_si is not None:
@@ -830,9 +831,9 @@ class LASSI(lib.StreamObject):
             fp = self.get_o1_chk_hash ().hexdigest ()
             return '{}/o1/{}'.format (self._method_key, fp)
         else:
-            return None
+            return False
 
-    _do_o1_chk=True
+    _do_o1_chk = getattr (__config__, 'lassi_do_o1_chk', True)
     def _o1_chk_off_env (self):
         return lib.temporary_env (self, _do_o1_chk=False)
 
