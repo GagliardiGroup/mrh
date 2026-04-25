@@ -674,7 +674,7 @@ def roots_trans_rdm12s (las, ci, nelec_frs, si_bra, si_ket, **kwargs):
     # First pass: single-fragment intermediates
     chkfile = kwargs.get ('chkfile', None)
     chkkey = kwargs.get ('chkkey', None)
-    if chkkey is not None:
+    if bool (chkkey):
         chkkey = chkkey + '/rdms'
     ints, lroots = frag.make_ints (las, ci, nelec_frs, nlas=nlas, smult_fr=smult_fr,
                                    disc_fr=disc_fr,

@@ -3,7 +3,7 @@ from pyscf.lib import chkfile as chk
 from pyscf.lib import H5FileWrap
 
 def has_chk (chkfile, with_record=None):
-    if chkfile is None: return False
+    if not bool (chkfile): return False
     if h5py.is_hdf5(chkfile):
         if with_record is None:
             return True

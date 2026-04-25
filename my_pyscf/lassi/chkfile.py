@@ -29,7 +29,7 @@ def clear_o1 (lsi, chkfile=None, key=None):
     if chkfile is None: chkfile = lsi.chkfile
     if key is None: key = '{}/o1'.format (lsi._method_key)
 
-    if chkfile is not None:
+    if bool (chkfile):
         if h5py.is_hdf5(chkfile):
             with H5FileWrap(chkfile, 'r+') as fh5:
                 if key in fh5:

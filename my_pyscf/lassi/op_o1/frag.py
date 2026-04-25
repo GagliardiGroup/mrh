@@ -459,7 +459,7 @@ class FragTDMInt (object):
                 timestamp of entry into this function, for profiling by caller
         '''
         t0 = (lib.logger.process_clock (), lib.logger.perf_counter ())
-        if self.chkkey is not None:
+        if bool (self.chkkey):
             if chk.has_chk (self.chkfile, with_record=self.chkkey):
                 self.load_chk_()
                 return t0
@@ -553,7 +553,7 @@ class FragTDMInt (object):
 
         t1 = self._make_dms_()
 
-        if (self.chkkey is not None) and chk.has_chk (self.chkfile):
+        if bool (self.chkkey) and chk.has_chk (self.chkfile):
             self.dump_chk ()
 
         return t0
@@ -1386,7 +1386,7 @@ def make_ints (las, ci, nelec_frs, smult_fr=None, screen_linequiv=DO_SCREEN_LINE
     ints = []
 
     for ifrag in range (nfrags):
-        chkkey1 = '{}/frag{}'.format (chkkey, ifrag) if chkkey is not None else None
+        chkkey1 = '{}/frag{}'.format (chkkey, ifrag) if bool (chkkey) else chkkey
         m0 = lib.current_memory ()[0]
         tdmint = _FragTDMInt_class (las, ci[ifrag],
                                     nlas[ifrag], nroots, nelec_frs[ifrag], rootaddr,
