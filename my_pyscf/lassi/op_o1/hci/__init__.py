@@ -170,8 +170,6 @@ def contract_ham_ci (las, h1, h2, ci_fr, nelec_frs, si_bra=None, si_ket=None, ci
 
     # First pass: single-fragment intermediates
     t00 = (lib.logger.process_clock (), lib.logger.perf_counter ())
-    if bool (chkkey):
-        chkkey = chkkey + '/hsi'
     ints, lroots = frag.make_ints (las, ci, nelec_frs, nlas=nlas, smult_fr=smult_fr,
                                    screen_linequiv=False,
                                    mask_ints=mask_ints,

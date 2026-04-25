@@ -1444,8 +1444,6 @@ def gen_contract_op_si_hdiag (las, h1, h2, ci, nelec_frs, smult_fr=None, disc_fr
     max_memory = getattr (las, 'max_memory', las.mol.max_memory)
     chkfile = kwargs.get ('chkfile', None)
     chkkey = kwargs.get ('chkkey', None)
-    if bool (chkkey):
-        chkkey = chkkey + '/hsi'
     dtype = h1.dtype
     nfrags, nroots = nelec_frs.shape[:2]
     if soc>1: raise NotImplementedError ("Spin-orbit coupling of second order")
