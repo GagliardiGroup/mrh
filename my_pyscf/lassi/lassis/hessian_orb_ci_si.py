@@ -44,7 +44,6 @@ class HessianOperator (sparse_linalg.LinearOperator):
         self.h2_paaa = []
         for i in range (self.nmo):
             self.h2_paaa.append (self.eris.ppaa[i][ncore:nocc])
-        
         self.casdm1, self.casdm2 = lsi.make_casdm12 (
             ci=self.ci, si=self.si, opt=self.opt
         )

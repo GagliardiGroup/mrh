@@ -461,8 +461,8 @@ class FragTDMInt (object):
         t0 = (lib.logger.process_clock (), lib.logger.perf_counter ())
         if bool (self.chkkey):
             if chk.has_chk (self.chkfile, with_record=self.chkkey):
-                self.load_chk_()
-                return t0
+                if self.load_chk_():
+                    return t0
 
         ci = self.ci
         ndeta, ndetb = self.ndeta_r, self.ndetb_r
@@ -558,45 +558,67 @@ class FragTDMInt (object):
 
         return t0
 
-    chkfields = ['mask_ints',
-                 'root_unique',
-                 'unique_root',
-                 'umat_root',
-                 'nuroots',
-                 'uroot_idx',
-                 'uroot_addr',
-                 'spman',
-                 'nspman',
-                 'spman_inter_uniq',
-                 'spman_inter_uroot_map',
-                 'hopping_index',
-                 'hopidx_null',
-                 'hopidx_1c',
-                 'hopidx_1s',
-                 'hopidx_2c',
-                 'mats']
+    chkconfig = ['norb',
+                 'nroots',
+                 'nelec_r',
+                 'spins_r',
+                 'smult_r',
+                 'rootaddr',
+                 'fragaddr',
+                 'discriminator',
+                 'idx_frag']
+
+    chkdata = ['mask_ints',
+               'root_unique',
+               'unique_root',
+               'umat_root',
+               'nuroots',
+               'uroot_idx',
+               'uroot_addr',
+               'spman',
+               'nspman',
+               'spman_inter_uniq',
+               'spman_inter_uroot_map',
+               'hopping_index',
+               'hopidx_null',
+               'hopidx_1c',
+               'hopidx_1s',
+               'hopidx_2c',
+               'mats']
 
     def dump_chk (self):
-        for field in self.chkfields:
+        key = '{}/dtype'.format (self.chkkey)
+        chk.dump (self.chkfile, key, str (self.dtype))
+        for field in self.chkconfig + self.chkdata:
             key = '{}/{}'.format (self.chkkey, field)
             value = getattr (self, field)
             if value is None: value = np.empty (0)
-            try:
-                chk.dump (self.chkfile, key, value)
-            except Exception as e:
-                print (key, value)
-                raise e from None
+            chk.dump (self.chkfile, key, value)
 
     def load_chk_(self):
+        # First, check for consistency with my setup data
+        key = '{}/dtype'.format (self.chkkey)
+        dtype = chk.load (self.chkfile, key)
+        if str (self.dtype) != dtype:
+            return False
         loaded = {}
-        for field in self.chkfields:
+        for field in self.chkconfig:
             key = '{}/{}'.format (self.chkkey, field)
             value = chk.load (self.chkfile, key)
-            if value is None:
-                return 1
+            loaded[field] = value
+        for key, val in loaded:
+            ref = np.asarray (getattr (self, key))
+            test = np.asarray (val).astype (ref.dtype)
+            if (ref!=test).any ():
+                return False
+        # Only if I survive this do I load the rest of the data
+        loaded = {}
+        for field in self.chkdata:
+            key = '{}/{}'.format (self.chkkey, field)
+            value = chk.load (self.chkfile, key)
             loaded[field] = value
         self.__dict__.update (**loaded)
-        return 
+        return True
 
     def update_ci_(self, iroot, ci):
         for i, civec in zip (iroot, ci):
